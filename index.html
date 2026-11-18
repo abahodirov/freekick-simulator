@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free Kick Simulator</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="view" aria-label="3D view of the free kick"></canvas>
+
+<header id="topbar">
+  <div class="brand">Free Kick Simulator</div>
+  <div id="score" title="Goals / kicks taken">
+    <span><b id="scGoals">0</b> goals</span><span><b id="scShots">0</b> kicks</span><span><b id="scRate">–</b> scored</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="seg" id="cams" role="group" aria-label="Camera">
+    <button data-cam="kicker" class="on" title="Behind the ball (1)">Kicker</button>
+    <button data-cam="follow" title="Chase the ball (2)">Follow</button>
+    <button data-cam="broadcast" title="TV gantry (3)">Broadcast</button>
+    <button data-cam="top" title="Overhead (4)">Top</button>
+    <button data-cam="goal" title="Behind the net (5)">Goal</button>
+    <button data-cam="orbit" title="Drag to orbit, wheel to zoom (6)">Orbit</button>
+  </div>
+  <button id="btnSound" class="ghost" title="Sound (M)">Sound on</button>
+  <button id="btnPanels" class="ghost" title="Hide or show the panels (H)">Hide panels</button>
+  <button id="btnHelp" class="ghost" title="Controls (?)">Help</button>
+</header>
+
+<aside id="left" class="panel">
+  <details open>
+    <summary>Kick</summary>
+    <div class="chips" id="presets">
+      <button data-preset="curler">Curler</button>
+      <button data-preset="dipper">Dipper</button>
+      <button data-preset="knuckle">Knuckleball</button>
+      <button data-preset="outside">Outside swerve</button>
+      <button data-preset="driven">Driven low</button>
+    </div>
+    <label class="row"><span>Ball speed</span><output id="oSpeed"></output>
+      <input type="range" id="iSpeed" min="12" max="38" step="0.25"></label>
+    <label class="row"><span>Direction</span><output id="oAz"></output>
+      <input type="range" id="iAz" min="-35" max="35" step="0.1"></label>
+    <label class="row"><span>Elevation</span><output id="oEl"></output>
+      <input type="range" id="iEl" min="0" max="40" step="0.1"></label>
+    <div class="strike">
+      <canvas id="pad" width="116" height="116" title="Where the boot meets the ball — drag to set spin"></canvas>
+      <div class="strike-side">
+        <label class="row"><span>Curl</span><output id="oSide"></output>
+          <input type="range" id="iSide" min="-12" max="12" step="0.1"></label>
+        <label class="row"><span>Topspin</span><output id="oTop"></output>
+          <input type="range" id="iTop" min="-10" max="10" step="0.1"></label>
+        <p class="hint">Drag the dot: it marks where the boot strikes the ball.</p>
+      </div>
+    </div>
+    <div class="two">
+      <label>Aim guide
+        <select id="iGuide"><option value="full">Full path</option><option value="short">First third</option><option value="off">Off</option></select></label>
+      <label>Kicker accuracy
+        <select id="iNoise"><option value="off">Perfect</option><option value="pro">Professional</option><option value="amateur">Amateur</option></select></label>
+    </div>
+  </details>
+
+  <details open>
+    <summary>Position</summary>
+    <canvas id="map" width="284" height="204" title="Drag the ball to move the free kick"></canvas>
+    <div class="readout" id="posReadout"></div>
+    <div class="btnrow"><button id="btnRandom">Random spot</button><button id="btnCentral">Central, 22 m</button></div>
+  </details>
+
+  <details>
+    <summary>Defence</summary>
+    <label class="row"><span>Players in the wall</span><output id="oWall"></output>
+      <input type="range" id="iWall" min="0" max="6" step="1"></label>
+    <label class="check"><input type="checkbox" id="iJump"> Wall jumps</label>
+    <label>Goalkeeper
+      <select id="iKeeper"><option value="off">None</option><option value="amateur">Amateur</option><option value="pro">Professional</option><option value="world">World class</option></select></label>
+  </details>
+
+  <details>
+    <summary>Conditions</summary>
+    <label class="row"><span>Wind speed</span><output id="oWind"></output>
+      <input type="range" id="iWind" min="0" max="20" step="0.5"></label>
+    <label class="row"><span>Wind blows toward</span><output id="oWindDir"></output>
+      <input type="range" id="iWindDir" min="0" max="355" step="5"></label>
+    <label class="row"><span>Air temperature</span><output id="oTemp"></output>
+      <input type="range" id="iTemp" min="-10" max="40" step="1"></label>
+    <label class="row"><span>Altitude</span><output id="oAlt"></output>
+      <input type="range" id="iAlt" min="0" max="4000" step="50"></label>
+    <label class="row"><span>Humidity</span><output id="oHum"></output>
+      <input type="range" id="iHum" min="0" max="100" step="5"></label>
+    <label>Surface
+      <select id="iSurface"><option value="dry">Dry grass</option><option value="wet">Wet grass</option><option value="turf">Artificial turf</option></select></label>
+    <div class="readout" id="airReadout"></div>
+  </details>
+
+  <details>
+    <summary>Physics</summary>
+    <label class="check"><input type="checkbox" id="iDrag"> Air drag</label>
+    <label class="check"><input type="checkbox" id="iMagnus"> Magnus effect (spin curve)</label>
+    <label class="check"><input type="checkbox" id="iKnuckle"> Knuckle effect (low-spin wobble)</label>
+    <label class="check"><input type="checkbox" id="iVacuum"> Show the no-air path for comparison</label>
+    <label class="check"><input type="checkbox" id="iTrails" checked> Keep trails of earlier kicks</label>
+  </details>
+</aside>
+
+<aside id="right" class="panel">
+  <details open>
+    <summary>Telemetry</summary>
+    <div class="tiles" id="tiles">
+      <div><span>Speed</span><b id="tSpeed">–</b></div>
+      <div><span>Height</span><b id="tHeight">–</b></div>
+      <div><span>Spin</span><b id="tSpin">–</b></div>
+      <div><span>Time</span><b id="tTime">–</b></div>
+      <div><span>Drag force</span><b id="tDrag">–</b></div>
+      <div><span>Magnus force</span><b id="tMagnus">–</b></div>
+      <div><span>Drag coeff. C<sub>d</sub></span><b id="tCd">–</b></div>
+      <div><span>Reynolds no.</span><b id="tRe">–</b></div>
+    </div>
+    <div id="summary" class="summary"></div>
+  </details>
+
+  <details open>
+    <summary>Flight profile</summary>
+    <div class="chart-wrap">
+      <div class="chart-title">Ball height along the path (m)</div>
+      <canvas id="chart" width="284" height="150"></canvas>
+      <div class="tip" id="chartTip" hidden></div>
+    </div>
+  </details>
+
+  <details open>
+    <summary>Goal face</summary>
+    <div class="chart-wrap">
+      <div class="chart-title">Goal-line crossings — click to aim there</div>
+      <canvas id="face" width="284" height="130"></canvas>
+      <div class="tip" id="faceTip" hidden></div>
+      <div class="legend">
+        <span><i class="mk goal"></i>Goal</span><span><i class="mk saved"></i>Saved</span><span><i class="mk miss"></i>Missed or blocked</span>
+      </div>
+    </div>
+    <div class="btnrow"><button id="btnMC" title="Repeat this kick 300 times with the selected kicker accuracy">Simulate 300 kicks</button><button id="btnClearFace">Clear</button></div>
+    <div id="mcOut" class="readout"></div>
+  </details>
+
+  <details open>
+    <summary>Kick log</summary>
+    <div id="log" class="log"><p class="hint">No kicks yet.</p></div>
+    <div class="btnrow"><button id="btnCsv">Export last kick (CSV)</button><button id="btnClearLog">Clear log</button></div>
+  </details>
+</aside>
+
+<div id="banner" hidden></div>
+<div id="badge" hidden></div>
+
+<footer id="bottom">
+  <button id="btnKick" class="primary">Kick <kbd>Space</kbd></button>
+  <button id="btnReplay" disabled>Replay <kbd>R</kbd></button>
+  <div class="seg" id="speeds" role="group" aria-label="Playback speed">
+    <button data-speed="1" class="on">1×</button>
+    <button data-speed="0.5">½×</button>
+    <button data-speed="0.25">¼×</button>
+    <button data-speed="0.1">⅒×</button>
+  </div>
+  <button id="btnPause">Pause <kbd>P</kbd></button>
+</footer>
+
+<div id="toast" hidden></div>
+
+<dialog id="help">
+  <h2>Controls</h2>
+  <table>
+    <tr><td><kbd>Space</kbd></td><td>Kick, or set up the next kick</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd> / <kbd>↑</kbd> <kbd>↓</kbd></td><td>Aim direction / elevation (hold <kbd>Shift</kbd> for fine steps)</td></tr>
+    <tr><td><kbd>W</kbd> <kbd>S</kbd></td><td>Ball speed up / down</td></tr>
+    <tr><td><kbd>A</kbd> <kbd>D</kbd></td><td>Curl left / right</td></tr>
+    <tr><td><kbd>Q</kbd> <kbd>E</kbd></td><td>Backspin / topspin</td></tr>
+    <tr><td>Drag on the pitch</td><td>Aim (Kicker camera) or orbit (Orbit camera)</td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>6</kbd></td><td>Cameras</td></tr>
+    <tr><td><kbd>R</kbd> <kbd>P</kbd> <kbd>M</kbd> <kbd>H</kbd></td><td>Replay, pause, mute, hide panels</td></tr>
+  </table>
+  <p>Drag the ball on the position map to move the free kick. Click the goal-face chart to have the simulator solve the aim for that spot with your current speed and spin.</p>
+  <form method="dialog"><button class="primary">Close</button></form>
+</dialog>
+
+<script src="js/physics.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
