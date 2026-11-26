@@ -8,7 +8,8 @@ Curl it, dip it, or knuckle it past the wall and the keeper. Every flight obeys 
 [![Play online](https://img.shields.io/badge/▶_Play-online-2ea44f?style=for-the-badge)](https://abahodirov.github.io/freekick-simulator/)
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Physics tests](https://img.shields.io/badge/physics_tests-29_passing-brightgreen)
+![Physics tests](https://img.shields.io/badge/tests-103_passing-brightgreen)
+![Version](https://img.shields.io/badge/version-2.0-blueviolet)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-lightgrey)
 ![WebGL2](https://img.shields.io/badge/WebGL2-3D-orange)
 
@@ -23,7 +24,27 @@ No install, no build step, no dependencies.
 **Run it locally:** double-click `index.html` (any current Chrome, Edge, Firefox or Safari).
 
 **Check the physics:** `node tests/physics.test.js` — 29 tests against conservation laws and closed-form results.
-All suites: `node tests/physics.test.js; node tests/regression.test.js; node tests/forces.test.js; node tests/keeper.test.js; node tests/people.test.js; node tests/cameras.test.js; node tests/labs.test.js; node tests/sculpt.test.js; node tests/rig.test.js` (100 tests).
+All nine suites (103 tests): `for t in tests/*.test.js; do node "$t"; done`
+
+## What's new in v2
+
+- **Real players.** Rigged, cel-shaded figures built from MakeHuman CC0 bodies, one per taker, keeper and wall
+  player, dressed in each match's team colours.
+- **Motion capture.** The taker's run-up and strike use recorded CMU motion capture, and the boot meets the ball at
+  the exact moment the flight simulation starts.
+- **Four new sections.** *Anatomy* (a narrated breakdown of one kick), *Free kicks* (12 famous goals recreated),
+  *Experiments* (seven controlled physics experiments) and *Ball lab* (four balls with wind-tunnel drag data).
+- **Match ball showcase.** The spinning ball in the top-left corner opens a 3-D viewer of World Cup balls, with
+  facts about each and a button to play with it.
+- **Strike from the boot.** An impact model turns boot speed and contact point into launch speed and spin.
+- **A goalkeeper who really dives.** He is now a rigid body that pushes off, flies ballistically and lands, and
+  can't change course mid-air.
+- **Ten cameras** (up from six), pause-and-orbit mid-flight, and the replay now includes the strike.
+- **Two looks.** Illustrated (ink outlines and flat tones) or a realistic stadium at day, sunset or night.
+- **New layout.** Two slim icon rails open one focused drawer of controls at a time, with a small live readout.
+- **103 tests** across nine suites (v1 had 29).
+
+v1 is still available as the [`v1.0.0`](https://github.com/abahodirov/freekick-simulator/tree/v1.0.0) tag.
 
 **Players** are stylized, cel-shaded rigged figures built from MakeHuman CC0 bodies, one per player: build, height and face traits approximate each footballer, with sculpted hair and beards grown from his own scalp and jaw, painted faces and clean outlines. Every free-kick recreation dresses the taker, wall and keeper in that day's team colours (see `assets/CREDITS.md`, rebuilt with `tools/build_players.py`).
 Their skeleton is driven by the simulator's own physics and footwork (`js/people.js`) through retargeting
@@ -68,6 +89,9 @@ for that spot with your current speed and spin.
   Brazuca, Jabulani and Cafusa, using the drag-crisis values measured
   in a wind tunnel by Hong & Asai (2014, *Scientific Reports* 4:5068) for two panel orientations. It shows C<sub>d</sub>
   against speed and runs a same-kick comparison.
+
+- **Match ball** — click the spinning ball at the top left. The ball grows into a large 3-D view you can drag to
+  turn, with tabs for other World Cup balls, a few facts about each, and a button to play with it.
 
 Two looks: **Illustrated** (default: ink outlines, flat tones with hatching, a paper-white world, grey defenders)
 and **Realistic stadium** (day / sunset / night).
@@ -118,6 +142,9 @@ values for each technique, not measurements of any particular goal.
 
 ## Files
 
+- `index.html`, `css/style.css` — the page (open `index.html` directly; no server needed)
+- `js/app.js` — controls, charts, game loop
+- `js/ui.js` — the layout: icon rails, drawers and the live readout
 - `js/physics.js` — the engine, including the goalkeeper body (also runs in Node)
 - `js/people.js` — skeletons, poses, keeper dressing, the takers and their run-up animation (also runs in Node)
 - `js/render.js` — WebGL2 renderer (stadium, surroundings, lighting presets, people, ball, net)
@@ -127,6 +154,13 @@ values for each technique, not measurements of any particular goal.
 - `js/sculpt.js` — sculpted body parts (fallback players): head, hair, beard, hands, gloves, boots, and anatomical limb tubes (also runs in Node)
 - `js/balls.js`, `js/history.js` — Ball lab and exhibition data, with sources (also run in Node)
 - `js/labs.js`, `js/story.js` — Ball lab, Experiments, Free kicks and the Anatomy story
+- `js/ballview.js`, `js/showcase.js` — the standalone ball viewer, the spinning logo and the match-ball showcase
+- `js/audio.js` — synthesised sound effects
+- `assets/mocap.js` — CMU motion-capture clips for the run-up and strike (generated by `tools/mocap_build.js`)
+- `assets/balls/` — 3-D ball models (generated by `tools/ball_model.js` and `tools/ball_bake.py`)
+- `tests/*.test.js` — physics, regression, force, keeper, people, camera, labs, sculpt and rig suites
+- `tools/` — offline build scripts for the players, motion capture and balls (not needed to play)
+- `docs/AUDIT.md` — the development audit and roadmap
 
 ## References
 
@@ -134,9 +168,11 @@ values for each technique, not measurements of any particular goal.
 - Hong, S. & Asai, T. (2014). Effect of panel shape of soccer ball on its flight characteristics. *Scientific Reports* 4, 5068.
 - Dupeux, G., Le Goff, A., Quéré, D. & Clanet, C. (2010). The spinning ball spiral. *New Journal of Physics* 12, 093004.
 - Match facts for the exhibition: see the sources listed on each case study (`js/history.js`).
-- `js/app.js` — controls, charts, game loop
-- `js/audio.js` — sound effects
-- `tests/*.test.js` — physics, regression, force, keeper, people and camera suites
+
+## Credits
+
+Player bodies are from MakeHuman (CC0) and the motion is from the CMU Graphics Lab Motion Capture Database. Ball
+models come from third parties under their own licences. Full details are in [`assets/CREDITS.md`](assets/CREDITS.md).
 
 ## License
 
