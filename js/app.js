@@ -8,11 +8,25 @@
   // chart ink (dark surface) — see css/style.css
   const INK = { text: '#f0efec', text2: '#c3c2b7', muted: '#898781', grid: '#2c2c2a', axis: '#383835', surface: '#1a1a19',
     series: '#3987e5', good: '#0ca30c' };
+  /** Chart colours follow the interface theme (paper or dark), read from the CSS custom properties. */
+  function refreshInk() {
+    const cs = getComputedStyle(document.body), v = (n) => cs.getPropertyValue(n).trim();
+    Object.assign(INK, { text: v('--text'), text2: v('--text-2'), muted: v('--muted'), grid: v('--grid'), axis: v('--axis'),
+      surface: v('--surface-solid'), good: v('--good') });
+  }
+  /** The illustrated 3-D style pairs with the paper interface; the realistic stadium with the dark one. */
+  function applyTheme() {
+    document.body.classList.toggle('paper', ui.style === 'ink');
+    document.querySelectorAll('#looks button').forEach((b) => b.classList.toggle('on', b.dataset.look === ui.style));
+    refreshInk();
+    if (typeof drawChart === 'function') { drawChart(); drawFace(); drawPad(); }
+  }
 
   // ───────────── state ─────────────
   const cfg = FK.defaultConfig();
   cfg.seed = (Math.random() * 1e9) | 0;
-  const ui = { guide: 'full', noise: 'off', vacuum: false, trails: true, cam: 'kicker', speed: 1, paused: false };
+  const ui = { guide: 'full', noise: 'off', vacuum: false, trails: true, cam: 'kicker', speed: 1, paused: false, taker: 'ronaldo', light: 'dusk', style: 'real' };   // the stadium by default
+  let runT = -10;            // kicker's clock relative to the strike (s); the ball is struck at runT = 0
   const noiseRng = FK.mulberry32((Math.random() * 1e9) | 0);
 
   let sim = null;            // staging simulation while aiming, live simulation during a kick
@@ -34,6 +48,7 @@
   let toastTimer = 0;
   function toast(msg, ms) {
     const t = $('toast'); t.textContent = msg; t.hidden = false;
+    if (window.FKSound) FKSound.ui('toast');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { t.hidden = true; }, ms || 2600);
   }
@@ -56,13 +71,14 @@
   function nearSign() { return cfg.ball.y >= 0 ? 1 : -1; }
 
   // ───────────── simulation lifecycle ─────────────
+  let goalAt = null, doneClock = 0, celebShown = false;      // goalAt: simulation time of the goal (celebration)
   function setupAim() {
     if (mode !== 'aim') cfg.seed = (Math.random() * 1e9) | 0;   // fresh wall / keeper / knuckle draw for the next kick
-    mode = 'aim'; isReplay = false; announced = false; acc = 0;
+    mode = 'aim'; isReplay = false; announced = false; acc = 0; goalAt = null; celebShown = false;
     sim = new FK.Simulation(cfg);
     previewDirty = true;
     $('banner').hidden = true; $('badge').hidden = true;
-    $('btnKick').firstChild.textContent = 'Kick ';
+    setKickLabel('Kick');
     refreshStatic();
   }
 
@@ -83,26 +99,49 @@
 
   function startShot(shotCfg, replay) {
     sim = new FK.Simulation(shotCfg);
-    mode = 'live'; isReplay = replay; announced = false; acc = 0;
-    ui.paused = false; $('btnPause').firstChild.textContent = 'Pause ';
+    mode = 'live'; isReplay = replay; announced = false; acc = 0; goalAt = null; celebShown = false;
+    ui.paused = false; syncPause();
     $('banner').hidden = true;
     $('badge').hidden = !replay; $('badge').textContent = 'REPLAY · SLOW MOTION';
-    $('btnKick').firstChild.textContent = 'Next kick ';
+    setKickLabel('Next kick');
     FKSound.play('kick', shotCfg.kick.speed);
   }
 
-  function kick() {
+  let pendingShot = null;
+  /** The taker runs up first; the simulation starts at the instant the boot meets the ball. */
+  function beginRunup(shot, replay, from) {
+    sim = new FK.Simulation(shot);         // staged: same seed, so the wall and keeper match the live kick
+    pendingShot = shot;
+    mode = 'runup'; isReplay = replay; announced = false; acc = 0; goalAt = null; celebShown = false;
+    runT = from; runFrom = from;
+    ui.paused = false; syncPause();
+    $('banner').hidden = true;
+    $('badge').hidden = !replay; $('badge').textContent = 'REPLAY · SLOW MOTION';
+    setKickLabel('Next kick');
+  }
+  // ── dock buttons: the kick button's label, and play/pause ──
+  let runFrom = -1;
+  function setKickLabel(text) { const l = $('btnKick').querySelector('.lbl'); if (l) l.textContent = text; }
+  function syncPause() {
+    const b = $('btnPause'); b.classList.toggle('paused', ui.paused);
+    b.title = ui.paused ? 'Resume (P)' : 'Pause (P)'; b.setAttribute('aria-label', ui.paused ? 'Resume' : 'Pause');
+  }
+
+  function kick(skipRunup) {
+    if (mode === 'runup') return;
     if (mode !== 'aim') { setupAim(); return; }
+    quiet = false;
     const shot = FK.cloneConfig(cfg);
     FK.applyNoise(shot.kick, FK.NOISE_LEVELS[ui.noise], noiseRng);
     lastShot = shot; lastIntended = FK.cloneConfig(cfg);
     $('btnReplay').disabled = false;
-    startShot(shot, false);
+    if (skipRunup || !renderer) startShot(shot, false);
+    else { beginRunup(shot, false, -FKPeople.runTime(taker()) - 0.4); FKSound.play('whistle'); }   // the referee blows; 0.4 s to settle out of the idle sway
   }
 
   function replay() {
     if (!lastShot) return;
-    startShot(lastShot, true);
+    beginRunup(lastShot, true, -0.7);
   }
 
   function announce() {
@@ -118,7 +157,7 @@
     b.append(strong, small);
     b.className = res.code === 'goal' ? 'goal' : '';
     b.hidden = false;
-    if (isReplay) return;
+    if (isReplay || quiet) return;        // replays and story/lab kicks are not scored
     FKSound.play(res.code === 'goal' ? 'goal' : 'miss');
     score.shots++; if (res.code === 'goal') score.goals++;
     $('scGoals').textContent = score.goals; $('scShots').textContent = score.shots;
@@ -131,7 +170,7 @@
 
   function finishShot() {
     if (!announced) announce();
-    mode = 'done';
+    mode = 'done'; doneClock = animClock;
     lastRec = sim.rec;
     if (!isReplay) {
       const r = sim.rec, n = r.x.length, a = new Float32Array(n * 3);
@@ -180,6 +219,8 @@
     bindSelect('iNoise', () => ui.noise, (v) => { ui.noise = v; }),
     bindSelect('iKeeper', () => cfg.keeper.level, (v) => { cfg.keeper.level = v; }),
     bindSelect('iSurface', () => cfg.env.surface, (v) => { cfg.env.surface = v; }),
+    bindSelect('iLight', () => ui.light, (v) => { ui.light = v; }),
+    bindSelect('iStyle', () => ui.style, (v) => { ui.style = v; applyTheme(); }),
     bindCheck('iJump', () => cfg.wall.jump, (v) => { cfg.wall.jump = v; }),
     bindCheck('iDrag', () => cfg.physics.drag, (v) => { cfg.physics.drag = v; }),
     bindCheck('iMagnus', () => cfg.physics.magnus, (v) => { cfg.physics.magnus = v; }),
@@ -219,6 +260,41 @@
     applyPreset(b.dataset.preset); b.blur();
   });
 
+  // ───────────── free-kick takers ─────────────
+  const taker = () => FKPeople.CHAR_BY_ID[ui.taker];
+  function renderTakers() {
+    const box = $('takers'); box.innerHTML = '';
+    for (const ch of FKPeople.CHARACTERS) {
+      const b = document.createElement('button');
+      b.dataset.taker = ch.id; b.className = ch.id === ui.taker ? 'on' : '';
+      const sw = document.createElement('i'); sw.className = 'kit';
+      sw.style.background = ch.kit.pattern === 1
+        ? `repeating-linear-gradient(90deg, ${rgb(ch.kit.shirt)} 0 4px, ${rgb(ch.kit.shirt2)} 4px 8px)` : rgb(ch.kit.shirt);
+      b.append(sw, document.createTextNode(ch.short));
+      b.title = `${ch.name}: ${ch.foot}-footed, ${ch.kick.label.toLowerCase()}`;
+      box.append(b);
+    }
+    const ch = taker();
+    $('takerNote').textContent = `${ch.foot === 'left' ? 'Left' : 'Right'} foot · signature: ${ch.kick.label}. ${ch.kick.note}. Speed and spin are typical values for this technique, not measurements of a particular goal.`;
+  }
+  const rgb = (c) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
+  function selectTaker(id, applySignature) {
+    ui.taker = id; renderTakers();
+    if (!applySignature) return;
+    const ch = taker(), p = ch.kick;
+    Object.assign(cfg.kick, { speed: p.speed, sideSpin: p.side, topSpin: p.top, elevation: 14 });
+    const aim = FK.solveAim(cfg, p.ty, p.tz);
+    cfg.kick.azimuth = clamp(aim.azimuth, -35, 35); cfg.kick.elevation = clamp(aim.elevation, 0, 40);
+    syncControls(); configChanged();
+    toast(`${ch.name}: ${p.label.toLowerCase()}`);
+  }
+  $('takers').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (mode !== 'aim') setupAim();
+    API.clearMatch();
+    selectTaker(b.dataset.taker, true); b.blur();
+  });
+
   // strike pad
   const pad = $('pad');
   function drawPad() {
@@ -238,10 +314,25 @@
     const r = pad.getBoundingClientRect(), lim = 40 * (r.width / pad.width);
     let dx = (e.clientX - r.left - r.width / 2) / lim, dy = (e.clientY - r.top - r.height / 2) / lim;
     const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+    if (boot.on) { boot.dx = dx; boot.dy = dy; applyBoot(); return; }
     cfg.kick.sideSpin = Math.round(-dx * 12 * 10) / 10;
     cfg.kick.topSpin = Math.round(-dy * 10 * 10) / 10;
     syncControls(); configChanged();
   }
+
+  // "strike from the boot": the pad marks the contact point (up to 3 cm off centre); FK.strikeFromBoot turns boot
+  // speed and contact offset into launch speed and spin by an impulse calculation
+  const boot = { on: false, speed: 22, dx: 0, dy: 0 };
+  function applyBoot() {
+    const s = FK.strikeFromBoot(boot.speed, boot.dx * 0.03, -boot.dy * 0.03);
+    cfg.kick.speed = clamp(Math.round(s.speed * 4) / 4, 12, 38);
+    cfg.kick.sideSpin = clamp(Math.round(s.sideSpin * 10) / 10, -12, 12);
+    cfg.kick.topSpin = clamp(Math.round(s.topSpin * 10) / 10, -10, 10);
+    $('bootOut').textContent = `Ball ${(s.speed * 3.6).toFixed(0)} km/h (${s.ratio.toFixed(2)}× the boot) · contact ${(s.offset * 100).toFixed(1)} cm off centre → ${Math.hypot(s.sideSpin, s.topSpin).toFixed(1)} rev/s`;
+    syncControls(); configChanged();
+  }
+  $('iBoot').addEventListener('change', (e) => { boot.on = e.target.checked; $('bootRow').hidden = !boot.on; e.target.blur(); if (boot.on) applyBoot(); });
+  $('iBootSpeed').addEventListener('input', (e) => { boot.speed = parseFloat(e.target.value); $('oBootSpeed').textContent = `${(boot.speed * 3.6).toFixed(0)} km/h`; applyBoot(); });
   pad.addEventListener('pointerdown', (e) => { pad.setPointerCapture(e.pointerId); padDrag(e); });
   pad.addEventListener('pointermove', (e) => { if (e.buttons) padDrag(e); });
   pad.addEventListener('dblclick', () => { cfg.kick.sideSpin = 0; cfg.kick.topSpin = 0; syncControls(); configChanged(); });
@@ -538,7 +629,7 @@
 
   // ───────────── top / bottom bars, keyboard ─────────────
   function setCam(name) {
-    ui.cam = name;
+    ui.cam = name; inspect.on = false;
     document.querySelectorAll('#cams button').forEach((b) => b.classList.toggle('on', b.dataset.cam === name));
   }
   $('cams').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { setCam(b.dataset.cam); b.blur(); } });
@@ -547,9 +638,15 @@
     ui.speed = parseFloat(b.dataset.speed);
     document.querySelectorAll('#speeds button').forEach((x) => x.classList.toggle('on', x === b)); b.blur();
   });
-  function togglePause() { ui.paused = !ui.paused; $('btnPause').firstChild.textContent = ui.paused ? 'Resume ' : 'Pause '; }
-  function toggleSound() { FKSound.setEnabled(!FKSound.enabled); $('btnSound').textContent = FKSound.enabled ? 'Sound on' : 'Sound off'; }
-  function togglePanels() { const hid = document.body.classList.toggle('hide-panels'); $('btnPanels').textContent = hid ? 'Show panels' : 'Hide panels'; }
+  function togglePause() { ui.paused = !ui.paused; if (!ui.paused) inspect.on = false; syncPause(); }
+  function toggleSound() {
+    FKSound.setEnabled(!FKSound.enabled);
+    const b = $('btnSound'); b.classList.toggle('muted', !FKSound.enabled); b.title = FKSound.enabled ? 'Sound on (M)' : 'Sound off (M)';
+  }
+  function togglePanels() {
+    const hid = document.body.classList.toggle('hide-panels'), b = $('btnPanels');
+    b.classList.toggle('on', !hid); b.setAttribute('aria-pressed', String(!hid)); b.title = hid ? 'Show the interface (H)' : 'Hide the interface (H)';
+  }
   $('btnKick').addEventListener('click', (e) => { kick(); e.currentTarget.blur(); });
   $('btnReplay').addEventListener('click', (e) => { replay(); e.currentTarget.blur(); });
   $('btnPause').addEventListener('click', (e) => { togglePause(); e.currentTarget.blur(); });
@@ -585,8 +682,8 @@
       case 'h': togglePanels(); break;
       case '?': $('help').showModal(); break;
       default: {
-        const cams = ['kicker', 'follow', 'broadcast', 'top', 'goal', 'orbit'];
-        if (k >= '1' && k <= '6') setCam(cams[+k - 1]); else return;
+        if (k >= '1' && k <= '4') setCam(['kicker', 'broadcast', 'follow', 'goal'][+k - 1]);
+        else return;
       }
     }
     e.preventDefault();
@@ -597,31 +694,20 @@
   const cam = { eye: [30, 5, 3], target: [0, 0, 1], up: [0, 0, 1], fov: 0.75 };
   let followDir = [-1, 0], camSnap = true;
 
+  // camera maths lives in js/cameras.js (pure, unit-tested); the app only supplies state
+  const inspect = { yaw: 0.6, pitch: 0.3, dist: 4, on: false };
+  const camOpts = { followBack: 5.5, followUp: 1.3 };
+  for (const [id, out, key] of [['iFB', 'oFB', 'followBack'], ['iFU', 'oFU', 'followUp']]) {
+    const el = $(id), show = () => { $(out).textContent = camOpts[key].toFixed(1) + ' m'; };
+    el.value = camOpts[key]; show();
+    el.addEventListener('input', () => { camOpts[key] = parseFloat(el.value); show(); });
+    el.addEventListener('pointerup', () => el.blur());
+  }
   function desiredCamera() {
-    const b0 = cfg.ball, s = sim.s, d = ballDistance() || 1;
-    const fx = -b0.x / d, fy = -b0.y / d;
-    const mid = [b0.x / 2, b0.y / 2, 1];
-    switch (ui.cam) {
-      case 'follow': {
-        const vh = Math.hypot(s[3], s[4]);
-        if (mode === 'aim') followDir = [fx, fy];
-        else if (vh > 2.5 && !sim.goal) followDir = [s[3] / vh, s[4] / vh];
-        const [dx, dy] = followDir;
-        return { eye: [s[0] - dx * 5.5, s[1] - dy * 5.5, Math.max(0.7, s[2] + 1.3)], target: [s[0] + dx * 4, s[1] + dy * 4, s[2] + 0.2], up: [0, 0, 1], fov: 0.9, k: 9 };
-      }
-      case 'broadcast':
-        return { eye: [mid[0] + 2, -47, 17], target: [b0.x * 0.2 + s[0] * 0.5, b0.y * 0.2 + s[1] * 0.5, 1], up: [0, 0, 1], fov: 0.66, k: 5 };
-      case 'top':
-        return { eye: [mid[0] + 0.01, mid[1] * 0.6, 12 + d * 1.25], target: [mid[0], mid[1] * 0.6, 0], up: [-1, 0, 0], fov: 0.8, k: 6 };
-      case 'goal':
-        return { eye: [-7.6, -nearSign() * 1.2, 3.3], target: [s[0] * 0.6, s[1] * 0.6, 0.8 + s[2] * 0.4], up: [0, 0, 1], fov: 0.75, k: 7 };
-      case 'orbit': {
-        const cp = Math.cos(orbit.pitch);
-        return { eye: [mid[0] + orbit.dist * cp * Math.cos(orbit.yaw), mid[1] + orbit.dist * cp * Math.sin(orbit.yaw), 1 + orbit.dist * Math.sin(orbit.pitch)], target: mid, up: [0, 0, 1], fov: 0.75, k: 14 };
-      }
-      default:
-        return { eye: [b0.x - fx * 7.5, b0.y - fy * 7.5, 2.35], target: [b0.x + fx * d * 0.8, b0.y + fy * d * 0.8, 1.25], up: [0, 0, 1], fov: 0.72, k: 6 };
-    }
+    // while the scorer celebrates, the camera goes to him (orbit and the paused inspect view stay the user's)
+    const name = inspect.on && ui.paused && mode !== 'aim' ? 'inspect' : takerCeleb && ui.cam !== 'orbit' ? 'celebrate' : ui.cam;
+    return FKCam.desired(name, { ball: cfg.ball, s: sim.s, mode, goal: sim.goal, followDir, orbit, inspect, opts: camOpts, keeperY: sim.keeper ? sim.keeper.y0 : 0,
+      taker: takerPos ? { x: takerPos[0], y: takerPos[1], z: takerPos[2] } : null, celeb: takerCeleb, time: performance.now() / 1000 });
   }
   function updateCamera(dt) {
     const t = desiredCamera();
@@ -642,9 +728,15 @@
   view.addEventListener('pointerup', () => { dragging = false; });
   view.addEventListener('pointermove', (e) => {
     if (!dragging) return;
+    // turning or aiming by hand clicks like a fine dial
+    if (ui.cam === 'orbit' || mode === 'aim' || ui.paused) FKSound.spin(Math.hypot(e.movementX, e.movementY) * 0.006, Math.hypot(e.movementX, e.movementY) * 0.25);
     if (ui.cam === 'orbit') {
       orbit.yaw -= e.movementX * 0.006;
       orbit.pitch = clamp(orbit.pitch + e.movementY * 0.005, 0.04, 1.5);
+    } else if (ui.paused && mode !== 'aim') {   // paused mid-flight: orbit the ball itself
+      inspect.on = true;
+      inspect.yaw -= e.movementX * 0.008;
+      inspect.pitch = clamp(inspect.pitch + e.movementY * 0.006, -0.2, 1.5);
     } else if (mode === 'aim') {
       cfg.kick.azimuth = clamp(cfg.kick.azimuth + e.movementX * 0.05, -35, 35);
       cfg.kick.elevation = clamp(cfg.kick.elevation - e.movementY * 0.05, 0, 40);
@@ -658,8 +750,23 @@
 
   // ───────────── frame ─────────────
   let trailBuf = new Float32Array(3 * 2048);
+  // force vectors straight from sim.forces(): length = FORCE_SCALE metres per newton
+  const FORCE_SCALE = 0.32, forceBuf = [0, 1, 2, 3].map(() => new Float32Array(6));
+  const FORCE_STYLE = [['gravity', [1, 1, 1, 0.95]], ['drag', [1, 0.35, 0.3, 0.95]], ['magnus', [0.35, 0.8, 1, 0.95]], ['knuckle', [1, 0.7, 0.2, 0.95]]];
+  $('iForces').addEventListener('change', (e) => { ui.forces = e.target.checked; e.target.blur(); });
+  function forceRibbons(out) {
+    const f = sim.forces(), s = sim.s;
+    FORCE_STYLE.forEach(([key, col], i) => {
+      const v = f[key], L = Math.hypot(v[0], v[1], v[2]);
+      if (L < 0.02) return;
+      const a = forceBuf[i];
+      a[0] = s[0]; a[1] = s[1]; a[2] = s[2]; a[3] = s[0] + v[0] * FORCE_SCALE; a[4] = s[1] + v[1] * FORCE_SCALE; a[5] = s[2] + v[2] * FORCE_SCALE;
+      out.push({ pts: a, n: 2, width: 0.04, color: col });
+    });
+  }
   function buildRibbons() {
     const out = [];
+    if (ui.cam === 'ballcam') return out;            // nothing in front of the ball close-up
     if (ui.trails) for (let i = (mode === 'aim' ? 0 : 1); i < trails.length; i++) out.push({ pts: trails[i], n: trails[i].length / 3, width: 0.045, color: [1, 1, 1, 0.3] });
     if (mode === 'aim') {
       if (vacuumPath) out.push({ pts: vacuumPath.points, n: vacuumPath.points.length / 3, width: 0.04, color: [0.55, 0.78, 1, 0.75], dash: { period: 2, on: 1 } });
@@ -674,7 +781,25 @@
       trailBuf[n * 3] = sim.s[0]; trailBuf[n * 3 + 1] = sim.s[1]; trailBuf[n * 3 + 2] = sim.s[2];
       out.push({ pts: trailBuf, n: n + 1, width: 0.07, color: [1, 0.93, 0.25, 0.95], fade: true });
     }
+    if (ui.forces) forceRibbons(out);
+    if (ui.style === 'ink') swooshRibbons(out);
+    for (const r of API.extraRibbons) out.push(r);
     return out;
+  }
+
+  // ink swooshes: the path of the kicking boot over the last fifth of a second, drawn as pen strokes
+  const swooshBuf = new Float32Array(3 * 16);
+  function swooshRibbons(out) {
+    const t = mode === 'runup' ? runT : mode === 'aim' ? -99 : sim.t;
+    if (t < -0.3 || t > 0.45) return;
+    const ch = taker(), L = FK.launchState(sim.cfg), side = ch.foot === 'left' ? 'L' : 'R';
+    let n = 0;
+    for (let i = 0; i < 16; i++) {
+      const tt = t - 0.2 + (i / 15) * 0.2;
+      const toe = FKPeople.kickerBody(ch, tt, sim.cfg.ball, [L.fx, L.fy]).legs[side].toe;
+      swooshBuf[n * 3] = toe[0]; swooshBuf[n * 3 + 1] = toe[1]; swooshBuf[n * 3 + 2] = toe[2] + 0.04; n++;
+    }
+    out.push({ pts: swooshBuf, n, width: 0.012, color: [0.1, 0.1, 0.12, 0.85], fade: true });
   }
 
   const tile = (id, main, sub) => { $(id).innerHTML = main + (sub ? `<small>${sub}</small>` : ''); };
@@ -690,29 +815,131 @@
     tile('tRe', (a.Re / 1e5).toFixed(1), '×10⁵');
   }
 
-  let last = performance.now(), frameNo = 0;
+  // ───────────── people (joint positions from js/people.js; the renderer only draws them) ─────────────
+  const WALL_SKIN = [[0.86, 0.66, 0.52], [0.55, 0.38, 0.27], [0.78, 0.58, 0.44], [0.36, 0.24, 0.17], [0.9, 0.72, 0.6], [0.66, 0.47, 0.34]];
+  const WALL_HAIR = [[0.1, 0.08, 0.07], [0.05, 0.05, 0.05], [0.42, 0.28, 0.16], [0.06, 0.05, 0.05], [0.7, 0.55, 0.32], [0.15, 0.1, 0.08]];
+  const WALL_STYLE = ['short', 'buzz', 'short', 'bald', 'long', 'buzz'];
+  const WALL_NUM = [4, 5, 14, 6, 23, 8];
+  const wallLook = (i) => ({
+    model: 'wall' + (i % 6), skin: WALL_SKIN[i % 6], hair: WALL_HAIR[i % 6], hairStyle: WALL_STYLE[i % 6], beard: i % 3 === 1,
+    kit: { shirt: [0.10, 0.12, 0.17], shirt2: [0.85, 0.85, 0.85], pattern: 0, shorts: [0.10, 0.12, 0.17], socks: [0.10, 0.12, 0.17], number: WALL_NUM[i % 6] },
+    boots: [0.9, 0.9, 0.9], build: [0.95, 0.9, 1.0, 0.93, 0.97, 0.91][i % 6],
+  });
+  const KEEPER_LOOK = {
+    model: 'keeper', skin: [0.80, 0.60, 0.47], hair: [0.12, 0.09, 0.07], hairStyle: 'short', beard: true,
+    kit: { shirt: [0.16, 0.62, 0.34], shirt2: [0.08, 0.3, 0.16], pattern: 0, shorts: [0.08, 0.10, 0.10], socks: [0.16, 0.62, 0.34], number: 1 },
+    boots: [0.08, 0.08, 0.09], gloves: [0.95, 0.95, 0.9], longSleeves: true, longShorts: true, build: 0.96,
+  };
+  // illustrated style: the defenders recede into pencil grey so the taker (and keeper) carry the colour
+  const greyC = (c) => { const l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; return [0.42 + l * 0.45, 0.43 + l * 0.45, 0.46 + l * 0.45]; };
+  const greyLook = (lk) => ({ ...lk, skin: greyC(lk.skin), hair: lk.hair && greyC(lk.hair).map((v) => v * 0.6), boots: greyC(lk.boots),
+    kit: { ...lk.kit, shirt: greyC(lk.kit.shirt).map((v) => v * 0.85), shirt2: greyC(lk.kit.shirt2), shorts: greyC(lk.kit.shorts).map((v) => v * 0.8), socks: greyC(lk.kit.socks).map((v) => v * 0.85) } });
+  function bodies() {
+    const out = [];
+    const ink = ui.style === 'ink', sides = API.sides;
+    const withKit = (lk, kit) => (kit ? { ...lk, kit: { ...lk.kit, shirt2: kit.shirt, pattern: 0, ...kit } } : lk);
+    sim.wall.forEach((p, i) => { const lk = withKit(wallLook(i), sides && sides.defence); out.push({ body: FKPeople.wallBody(p, animClock + i * 1.7), look: ink ? greyLook(lk) : lk }); });
+    if (sim.keeper) out.push({ body: FKPeople.keeperBody(sim.keeper, animClock, sim.s && [sim.s[0], sim.s[1], sim.s[2]]), look: withKit(KEEPER_LOOK, sides && sides.keeper && { ...sides.keeper, number: 1 }) });
+    const ch0 = taker();
+    const ch = sides && sides.attack ? { ...ch0, kit: { ...ch0.kit, ...sides.attack } } : ch0;
+    const L = FK.launchState(mode === 'aim' ? cfg : sim.cfg);
+    // once the shot is over the taker's own clock keeps running (he finishes his follow-through, and after a goal he
+    // celebrates) instead of freezing with the simulation
+    const t = mode === 'aim' ? -99 : mode === 'runup' ? runT : mode === 'done' ? sim.t + (animClock - doneClock) : sim.t;
+    const kb = FKPeople.kickerBody(ch, t, sim.cfg.ball, [L.fx, L.fy], animClock, goalAt !== null ? { tGoal: goalAt } : null);
+    takerPos = kb.pelvis;
+    takerCeleb = kb.celebDir ? { dx: kb.celebDir[0], dy: kb.celebDir[1] } : null;
+    if (kb.celeb && !celebShown) { celebShown = true; toast(`${ch.short}: ${FKPeople.CELEB_NAMES[kb.celeb]}`); }
+    out.push({ body: kb, look: ch });
+    lastBodies = out;
+    return out;
+  }
+  let lastBodies = [];
+
+  // name tags over people (exhibition recreations): {who: 'taker'|'keeper'|'wall0'.., text}
+  const tagLayer = $('tags');
+  function updateTags() {
+    const tags = API.tags;
+    if (!renderer || !tags.length || ui.style === undefined) { if (tagLayer.childElementCount) tagLayer.innerHTML = ''; return; }
+    while (tagLayer.childElementCount < tags.length) tagLayer.append(document.createElement('div'));
+    while (tagLayer.childElementCount > tags.length) tagLayer.lastChild.remove();
+    const nWall = sim.wall.length;
+    tags.forEach((tg, i) => {
+      const elT = tagLayer.children[i];
+      let b = null;
+      if (tg.who === 'taker') b = lastBodies[lastBodies.length - 1];
+      else if (tg.who === 'keeper' && sim.keeper) b = lastBodies[nWall];
+      else if (tg.who.startsWith('wall')) b = lastBodies[+tg.who.slice(4)];
+      const p = b && renderer.project(b.body.head[0], b.body.head[1], b.body.head[2] + 0.32);
+      if (!p) { elT.hidden = true; return; }
+      elT.hidden = false; elT.textContent = tg.text; elT.className = 'tag3d ' + (tg.who === 'taker' ? 'att' : 'def');
+      elT.style.transform = `translate(${p[0].toFixed(0)}px, ${p[1].toFixed(0)}px) translate(-50%, -100%)`;
+    });
+  }
+  let takerPos = null, takerCeleb = null;
+
+  // ── the dock reacts to the shot: the kick button fills as the taker runs up; body[data-mode] drives styling ──
+  const dock = { kick: $('btnKick'), p: -1, mode: '' };
+  function updateDock() {
+    const p = mode === 'runup' ? clamp(1 - runT / Math.min(-0.01, runFrom), 0, 1) : mode === 'live' ? 1 : 0;
+    if (Math.abs(p - dock.p) > 0.004) { dock.kick.style.setProperty('--p', p.toFixed(3)); dock.p = p; }
+    if (mode !== dock.mode) { document.body.dataset.mode = mode; dock.mode = mode; }
+  }
+  /** Segmented controls get a sliding highlight that follows whichever button is on. */
+  function initSliders() {
+    for (const g of document.querySelectorAll('.slider')) {
+      const pill = document.createElement('i'); pill.className = 'pill'; pill.setAttribute('aria-hidden', 'true'); g.prepend(pill);
+      const place = () => {
+        const on = g.querySelector('button.on');
+        if (!on || !on.offsetWidth) { pill.style.opacity = '0'; return; }
+        pill.style.opacity = '1'; pill.style.width = on.offsetWidth + 'px'; pill.style.transform = `translateX(${on.offsetLeft}px)`;
+      };
+      new MutationObserver(place).observe(g, { subtree: true, attributes: true, attributeFilter: ['class'] });
+      window.addEventListener('resize', place); requestAnimationFrame(place);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+    }
+  }
+
+  let last = performance.now(), frameNo = 0, animClock = 0;   // animClock: idle motion time (stops when paused)
   function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now; frameNo++;
+    const raw = (now - last) / 1000; last = now; frameNo++;
+    // camera smoothing uses a capped step; the shot itself runs on real elapsed time (up to 0.25 s per frame), so a
+    // slow frame rate no longer turns a 110 km/h shot into slow motion (the old 0.05 s cap did, below 20 fps)
+    const dt = Math.min(0.05, raw), simDt = Math.min(0.25, raw);
+    if (!ui.paused) animClock += simDt * ui.speed;
     if (mode === 'aim') updatePreview();
+    if (mode === 'runup' && !ui.paused) {
+      runT += simDt * (isReplay ? Math.min(ui.speed, 0.25) : ui.speed);
+      if (runT >= 0) startShot(pendingShot, isReplay);
+    }
     if (mode === 'live' && !ui.paused) {
       const scale = isReplay ? Math.min(ui.speed, 0.25) : ui.speed;
-      acc += dt * scale;
+      acc += simDt * scale;
       let n = 0;
-      while (acc >= sim.dt && !sim.done && sim.t < freezeAt && n++ < 400) { sim.step(); acc -= sim.dt; }
+      while (acc >= sim.dt && !sim.done && sim.t < freezeAt && n++ < 1000) { sim.step(); acc -= sim.dt; }
       if (acc > sim.dt) acc = 0;
       for (const ev of sim.events) FKSound.play(ev.type === 'goal' ? null : ev.type, ev.speed);
       sim.events.length = 0;
+      if (sim.goal && goalAt === null && !isReplay) goalAt = sim.t;   // the taker celebrates (not in replays)
       if (!announced && (sim.goal || sim.caught || sim.offTarget || (sim.firstTouchT >= 0 && sim.t > sim.firstTouchT + 1.1))) announce();
       if (sim.done) finishShot();
     }
+    for (const h of frameHooks) h(dt);
     updateCamera(dt);
     if (renderer) {
       renderer.draw({
         cam, dt,
         ball: { x: sim.s[0], y: sim.s[1], z: sim.s[2], q: sim.q },
-        wall: sim.wall, keeper: sim.keeper, net: sim.net,
+        bodies: bodies(), light: ui.light, style: ui.style, net: sim.net, ballDesign: sim.cfg.ballId,
         ribbons: buildRibbons(),
       });
+    }
+    updateTags();
+    updateDock();
+    // the crowd: a murmur while you line up, building through the run-up, loudest in flight (stadium look only)
+    if (frameNo % 20 === 0) {
+      const lv = ui.style !== 'real' || ui.paused ? 0 : mode === 'runup' ? 0.55 + 0.45 * clamp(1 - runT / Math.min(-0.01, runFrom), 0, 1) : mode === 'live' ? 1 : mode === 'done' ? 0.7 : 0.5;
+      FKSound.crowd(lv);
     }
     if (mode === 'live' || frameNo % 6 === 0) updateTiles();
     if ((mode === 'live' && frameNo % 3 === 0) || frameNo % 20 === 0) { if (chartHover < 0) drawChart(); }
@@ -720,9 +947,60 @@
     requestAnimationFrame(frame);
   }
 
+  // ───────────── API for the labs, the story and the exhibition (js/labs.js, js/story.js) ─────────────
+  const frameHooks = [];
+  const API = {
+    cfg, ui,
+    get sim() { return sim; }, get mode() { return mode; }, get runT() { return runT; }, get lastShot() { return lastShot; },
+    extraRibbons: [],
+    sides: null,        // match kits for an exhibition recreation: {attack, defence, keeper}
+    tags: [],           // name tags shown over people
+    /** Leave a recreation: back to the user's own kits, no name tags. */
+    clearMatch() { API.sides = null; API.tags = []; },
+    onFrame(fn) { frameHooks.push(fn); },
+    setupAim, configChanged, syncControls, setCam, selectTaker, toast, kick, replay,
+    taker,
+    /** Solve the aim for a goal-line target with the current speed and spin, and apply it. */
+    aimAt(ty, tz) {
+      const a = FK.solveAim(cfg, ty, tz);
+      cfg.kick.azimuth = clamp(a.azimuth, -35, 35); cfg.kick.elevation = clamp(a.elevation, 0, 40);
+      syncControls(); configChanged(); return a;
+    },
+    setSpeed(v) { ui.speed = v; document.querySelectorAll('#speeds button').forEach((x) => x.classList.toggle('on', parseFloat(x.dataset.speed) === v)); },
+    setPaused(p) { if (ui.paused !== p) togglePause(); },
+    setForces(on) { ui.forces = on; $('iForces').checked = on; },
+    /** Take the current set-up as a kick (with the run-up) without counting it in the score. */
+    play(from) {
+      if (mode !== 'aim') setupAim();
+      const shot = FK.cloneConfig(cfg);
+      lastShot = shot; lastIntended = FK.cloneConfig(cfg); $('btnReplay').disabled = false;
+      beginRunup(shot, false, from !== undefined ? from : -FKPeople.runTime(taker()) - 0.4);
+      quiet = true;
+    },
+    /** Jump the last kick to time t (s after the strike; negative = during the run-up) and pause there. */
+    seek(t) {
+      if (!lastShot) return;
+      if (t < 0) { beginRunup(lastShot, false, t); quiet = true; }
+      else {
+        startShot(lastShot, false); quiet = true;
+        while (!sim.done && sim.t < t) { sim.step(); if (sim.goal && goalAt === null) goalAt = sim.t; }
+        sim.events.length = 0;
+        // past the end of the flight: the taker's clock runs on (follow-through, celebration)
+        if (sim.done && t > sim.t) { mode = 'done'; doneClock = animClock - (t - sim.t); announced = true; }
+      }
+      if (!ui.paused) togglePause();
+    },
+    shotDuration() {
+      if (!lastShot) return 0;
+      const s = new FK.Simulation(lastShot, { record: false }); s.run(); return s.t;
+    },
+  };
+  let quiet = false;
+  window.FKApp = API;
+
   // ───────────── boot ─────────────
   setupAim();
-  applyPreset('curler');
+  if (location.hash.indexOf('taker=') < 0) selectTaker(ui.taker, true);
   $('toast').hidden = true;
   syncControls(); renderLog(); drawMap(); drawFace(); drawChart();
   window.addEventListener('resize', () => { drawMap(); drawFace(); drawChart(); });
@@ -731,9 +1009,25 @@
   // (freeze = stop the kick at that many seconds; add &ff to jump straight there)
   const hash = new URLSearchParams(location.hash.slice(1));
   if (hash.get('cam')) setCam(hash.get('cam'));
+  if (hash.get('taker')) selectTaker(hash.get('taker'), true);
+  if (hash.get('light')) { ui.light = hash.get('light'); syncControls(); }
+  if (hash.get('style')) { ui.style = hash.get('style'); syncControls(); }
+  // top-bar switch between the illustrated background and the stadium
+  $('looks').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    ui.style = b.dataset.look; syncControls(); applyTheme(); b.blur();
+  });
+  applyTheme();
+  initSliders();
+  if (hash.get('ball')) { cfg.ballId = hash.get('ball'); configChanged(); }
+  if (hash.get('preset')) applyPreset(hash.get('preset'));
+  if (hash.has('panels')) togglePanels();
   if (hash.has('freeze')) freezeAt = parseFloat(hash.get('freeze'));
+  // #run=-0.3 freezes the run-up at that time before the strike (for screenshots of the kicker)
+  if (hash.has('run')) setTimeout(() => { kick(); runT = parseFloat(hash.get('run')); ui.paused = true; }, 200);
+  if (hash.has('go')) setTimeout(() => kick(), 200);     // a normal kick, run-up included
   if (hash.has('kick')) setTimeout(() => {
-    kick();
+    kick(true);
     if (hash.has('ff')) while (!sim.done && sim.t < freezeAt) sim.step();
   }, 200);
 

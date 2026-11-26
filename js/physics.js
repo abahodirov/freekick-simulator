@@ -70,10 +70,14 @@
     turf: { label: 'Artificial turf', restitution: 0.67, friction: 0.60, rolling: 0.060 },
   };
 
+  // Goalkeeper. react: decision delay after the kick (s). push: ground-contact time of the take-off (s).
+  // vDive / vUp: largest horizontal / vertical take-off speed of the centre of mass (m/s); elite keepers reach
+  // roughly 4–5 m/s laterally in a power dive. spin: how fast the body can rotate toward the dive (rad/s).
+  // err: 1σ misread of the crossing point (m). catchSpeed: fastest ball (relative to the gloves) that is held.
   const KEEPER_LEVELS = {
-    amateur: { label: 'Amateur',     react: 0.34, acc: 10, vmax: 5.2, err: 0.55, catchSpeed: 14 },
-    pro:     { label: 'Professional', react: 0.27, acc: 13, vmax: 6.3, err: 0.30, catchSpeed: 19 },
-    world:   { label: 'World class', react: 0.22, acc: 16, vmax: 7.4, err: 0.12, catchSpeed: 23 },
+    amateur: { label: 'Amateur',      react: 0.34, push: 0.21, vDive: 3.7, vUp: 2.5, spin: 5.5, arm: 11, err: 0.55, catchSpeed: 14, read: 0.2 },
+    pro:     { label: 'Professional', react: 0.27, push: 0.18, vDive: 4.3, vUp: 2.9, spin: 6.5, arm: 13, err: 0.30, catchSpeed: 19, read: 0.4 },
+    world:   { label: 'World class',  react: 0.22, push: 0.16, vDive: 4.9, vUp: 3.3, spin: 7.5, arm: 15, err: 0.12, catchSpeed: 23, read: 0.55 },
   };
 
   // Kick-to-kick execution scatter (1σ): relative speed, angles in degrees, spin in rev/s
@@ -115,9 +119,13 @@
     return { rho, mu, pressure };
   }
 
-  function dragCoefficient(Re, S) {
+  /** Default drag-crisis parameters (engine fit). A ball model (js/balls.js) may override them via cfg.aero. */
+  const AERO_DEFAULT = Object.freeze({ cdSub: CD_SUB, cdSuper: CD_SUPER, reCrit: RE_CRIT, reWidth: RE_WIDTH });
+
+  function dragCoefficient(Re, S, a) {
+    a = a || AERO_DEFAULT;
     if (S > 1) S = 1;   // the spin correction is only meaningful for ordinary spin parameters
-    return CD_SUPER + (CD_SUB - CD_SUPER) / (1 + Math.exp((Re - RE_CRIT) / RE_WIDTH)) + CD_SPIN * S;
+    return a.cdSuper + (a.cdSub - a.cdSuper) / (1 + Math.exp((Re - a.reCrit) / a.reWidth)) + CD_SPIN * S;
   }
 
   function liftCoefficient(S) {
@@ -207,43 +215,87 @@
     return players;
   }
 
-  const KEEPER_REST_Z = 1.15, KEEPER_REACH = 2.25, KEEPER_TORSO = 1.5;
+  /*
+   * Goalkeeper model (2-D, in the plane x = k.x a little off the goal line).
+   *
+   * The keeper is a rigid body with a centre of mass C = (cy, cz), a body axis at angle `theta` from vertical
+   * (+ = leaning toward +y) and arms at angle `phi`. During the take-off (`push`) the planted feet supply the
+   * force that brings C up to the chosen launch velocity. After that the keeper is a projectile: C follows
+   * gravity exactly and cannot change course in mid-air. Only the body rotation and the arms keep adjusting.
+   * The flight ends when the body meets the ground. This replaces the earlier "hands slide to the target"
+   * model, which let the hands hang at the target before a scripted fall.
+   */
+  const KP = {
+    LEG_READY: 0.88,   // centre of mass to ankles in the ready crouch (m)
+    LEG: 0.97,         // ... legs extended
+    TORSO: 0.48,       // centre of mass to shoulders
+    HEAD: 0.72,        // centre of mass to top of head
+    ARM: 0.70,         // shoulder to centre of the gloves, fully extended
+    ARM_REST: 0.42,    // ready position: elbows bent, gloves at waist height
+    ANKLE: 0.07,       // ankle height above the ground when standing
+    LYING: 0.21,       // centre-of-mass height when lying on the side
+    FRICTION: 7.0,     // sliding deceleration on the grass after landing (m/s²)
+    SHUFFLE: 2.2,      // lateral speed of a short shuffle without diving (m/s)
+  };
+  const KEEPER_REST_Z = KP.LEG_READY + KP.ANKLE;
 
   function makeKeeper(cfg, rng, hasWall) {
     const lv = KEEPER_LEVELS[cfg.keeper.level];
     if (!lv) return null;
     const sgn = cfg.ball.y >= 0 ? 1 : -1;
-    const y0 = hasWall ? -sgn * 0.7 : 0;            // the wall covers the near post; keeper shades far side
+    let y0 = hasWall ? -sgn * 0.7 : 0;              // the wall covers the near post; keeper shades far side
+    let x0 = 0.45;                                  // stands just off the goal line
+    const pos = cfg.keeper.pos;                     // optional start position (recreations: e.g. a keeper off his line)
+    if (pos) { if (pos.x !== undefined) x0 = pos.x; if (pos.y !== undefined) y0 = pos.y; }
     const k = {
-      level: lv, x: 0.45, y0,
-      hy: y0, hz: KEEPER_REST_Z, vy: 0, vz: 0,      // hands (y,z) in the keeper plane and their velocity
-      fy: y0, fz: 0, sy: y0, sz: KEEPER_TORSO,      // feet and shoulders, derived from the hands
-      speed: 0, fallV: 0, state: 'ready',
+      level: lv, x: x0, y0,
+      cy: y0, cz: KEEPER_REST_Z, cvy: 0, cvz: 0,     // centre of mass and its velocity
+      theta: 0, phi: Math.PI, armExt: KP.ARM_REST, leg: KP.LEG_READY,
+      launchY: 0, launchZ: 0, tPushEnd: 0, tTakeoff: 0,
+      hy: y0, hz: 0, vy: 0, vz: 0,                   // glove centre and its velocity (used for contact)
+      fy: y0, fz: 0, sy: y0, sz: 0,                  // ankles and shoulders, derived each step
+      state: 'ready',
       tReact: lv.react + (hasWall ? 0.05 : 0) + rng() * 0.04,
       errY: gaussian(rng) * lv.err, errZ: gaussian(rng) * lv.err * 0.6,
-      truthY: 0, truthZ: 0, tArrive: 0, tDecide: 0,
+      truthY: 0, truthZ: 0, readY: 0, readZ: 0, tArrive: 0, tDecide: 0, tLand: -1,
     };
+    // a wall hides the strike: the keeper picks the ball up only as it clears the wall, then needs his reaction time
+    // (the RNG draw order above is unchanged, so seeds still reproduce)
+    if (hasWall) {
+      const d = Math.hypot(cfg.ball.x, cfg.ball.y), vh = cfg.kick.speed * Math.cos(cfg.kick.elevation * DEG);
+      const tWall = Math.min(C.WALL_DISTANCE, d - 0.5) / Math.max(5, vh);
+      k.tReact = Math.max(k.tReact, tWall + 0.1);
+    }
     keeperPose(k);
+    k.vy = 0; k.vz = 0;
     return k;
   }
 
-  /** Derive feet and shoulder points from the hand position (simple reach skeleton). */
+  /** Lowest allowed centre-of-mass height for a body angle: neither the feet nor the head may go into the ground. */
+  function keeperMinZ(k) {
+    const c = Math.cos(k.theta);
+    return Math.max(KP.LYING, k.leg * c + KP.ANKLE, -KP.HEAD * c + 0.1);
+  }
+
+  /** Derive ankles, shoulders and gloves from the body state. */
   function keeperPose(k) {
-    const py = k.y0 + 0.25 * (k.hy - k.y0);         // planted-foot pivot drifts toward the dive side
-    const dy = k.hy - py, dz = k.hz;
-    const len = Math.hypot(dy, dz) || 1e-6;
-    const uy = dy / len, uz = dz / len;
-    if (len >= KEEPER_REACH) {                      // fully stretched: body is a straight line
-      k.fy = k.hy - KEEPER_REACH * uy; k.fz = k.hz - KEEPER_REACH * uz;
-      k.sy = k.fy + KEEPER_TORSO * uy; k.sz = k.fz + KEEPER_TORSO * uz;
-    } else {                                        // feet planted, torso leans toward the hands
-      const s = clamp((len - 1.3) / (KEEPER_REACH - 1.3), 0, 1);
-      let ty = uy * s, tz = 1 - s + uz * s;
-      const tl = Math.hypot(ty, tz) || 1;
-      ty /= tl; tz /= tl;
-      k.fy = py; k.fz = 0;
-      k.sy = py + KEEPER_TORSO * ty; k.sz = KEEPER_TORSO * tz;
+    const by = Math.sin(k.theta), bz = Math.cos(k.theta);
+    k.fy = k.cy - k.leg * by; k.fz = k.cz - k.leg * bz;
+    k.sy = k.cy + KP.TORSO * by; k.sz = k.cz + KP.TORSO * bz;
+    k.hy = k.sy + k.armExt * Math.sin(k.phi); k.hz = k.sz + k.armExt * Math.cos(k.phi);
+    if (k.hz < 0.09) {                              // gloves rest on the grass instead of going through it
+      const dzs = k.sz - 0.09, ext = k.armExt;
+      const hyOff = Math.sqrt(Math.max(0, ext * ext - dzs * dzs)) * (Math.sign(Math.sin(k.phi)) || 1);
+      k.hy = k.sy + hyOff; k.hz = 0.09;
     }
+  }
+
+  /** Turn angle a toward b by at most step, the short way round. */
+  function turnToward(a, b, step) {
+    let d = b - a;
+    while (d > Math.PI) d -= TWO_PI;
+    while (d < -Math.PI) d += TWO_PI;
+    return a + clamp(d, -step, step);
   }
 
   // ───────────────────────────── simulation ─────────────────────────────
@@ -271,7 +323,9 @@
       this.windY = env.windSpeed * Math.sin(wd);
       this.useDrag = cfg.physics.drag;
       this.useMagnus = cfg.physics.magnus;
+      this.magnusScale = 1;                       // < 1 only in the keeper's own (imperfect) prediction of the flight
       this.useKnuckle = cfg.physics.knuckle;
+      this.aeroP = Object.assign({}, AERO_DEFAULT, cfg.aero || {});   // ball model (drag crisis)
 
       // RNG draw order is fixed so a seed always reproduces the same shot.
       const rng = mulberry32((cfg.seed | 0) * 2654435761 + 12345);
@@ -284,6 +338,7 @@
       this._k1 = new Float64Array(9); this._k2 = new Float64Array(9);
       this._k3 = new Float64Array(9); this._k4 = new Float64Array(9);
       this._tmp = new Float64Array(9);
+      this._F = new Float64Array(9);   // last-evaluated accelerations (m/s²): drag[0..2], Magnus[3..5], knuckle[6..8]
       this.q = [1, 0, 0, 0];   // orientation quaternion (w,x,y,z), for rendering
 
       const L = launchState(cfg);
@@ -334,6 +389,7 @@
     _deriv(s, o) {
       const vx = s[3], vy = s[4], vz = s[5], wx = s[6], wy = s[7], wz = s[8];
       let ax = 0, ay = 0, az = -this.g, dw = 0;
+      const F = this._F; F.fill(0);
 
       const rx = vx - this.windX, ry = vy - this.windY, rz = vz;   // velocity relative to the air
       const sp2 = rx * rx + ry * ry + rz * rz;
@@ -346,14 +402,16 @@
         const q = 0.5 * this.rho * AREA * sp / M;          // ½ρA|v|/m
 
         if (this.useDrag) {
-          const cd = dragCoefficient(Re, S);
+          const cd = dragCoefficient(Re, S, this.aeroP);
           ax -= q * cd * rx; ay -= q * cd * ry; az -= q * cd * rz;
+          F[0] = -q * cd * rx; F[1] = -q * cd * ry; F[2] = -q * cd * rz;
           // skin friction slowly spins the ball down
           dw = -(this.rho * AREA * R * R * SPIN_DECAY * sp) / INERTIA;
         }
         if (this.useMagnus && cmag > 1e-9) {
-          const k = q * liftCoefficient(S) * sp / cmag;    // ½ρA·Cl·v² along (ω × v)
+          const k = q * liftCoefficient(S) * sp / cmag * this.magnusScale;    // ½ρA·Cl·v² along (ω × v)
           ax += k * cx; ay += k * cy; az += k * cz;
+          F[3] = k * cx; F[4] = k * cy; F[5] = k * cz;
         }
         if (this.useKnuckle) {
           const wmag = Math.sqrt(wx * wx + wy * wy + wz * wz);
@@ -361,7 +419,7 @@
           const h = Math.sqrt(rx * rx + ry * ry);
           if (kf > 0 && h > 1e-6) {
             kf *= kf;
-            const supercritical = 1 / (1 + Math.exp(-(Re - RE_CRIT) / RE_WIDTH));
+            const supercritical = 1 / (1 + Math.exp(-(Re - this.aeroP.reCrit) / this.aeroP.reWidth));
             const ck = KNUCKLE_CL * kf * supercritical;
             // lateral basis ⟂ to the airflow: e1 = horizontal right, e2 = up-ish
             const e1x = ry / h, e1y = -rx / h;
@@ -373,6 +431,7 @@
             ax += k * (c1 * e1x + c2 * e2x);
             ay += k * (c1 * e1y + c2 * e2y);
             az += k * (c2 * e2z);
+            F[6] = k * (c1 * e1x + c2 * e2x); F[7] = k * (c1 * e1y + c2 * e2y); F[8] = k * (c2 * e2z);
           }
         }
       }
@@ -559,8 +618,8 @@
       // goalkeeper: torso, head, arms, gloves
       const k = this.keeper;
       if (k && Math.abs(s[0] - k.x) < 0.6) {
-        const sp = Math.hypot(s[3], s[4], s[5]);
-        const vg = this._collidePoint(k.x, k.hy, k.hz, 0.16, KEEPER_E, KEEPER_MU, 0, k.vy, k.vz);
+        const sp = Math.hypot(s[3], s[4] - k.vy, s[5] - k.vz);   // ball speed relative to the gloves
+        const vg =this._collidePoint(k.x, k.hy, k.hz, 0.16, KEEPER_E, KEEPER_MU, 0, k.vy, k.vz);
         let v = vg;
         const ty = k.sy - k.fy, tz = k.sz - k.fz, tl = Math.hypot(ty, tz) || 1;
         v = Math.max(v, this._collideSegment(k.x, k.sy, k.sz, k.x, k.hy, k.hz, 0.09, KEEPER_E, KEEPER_MU, 0, k.vy, k.vz));
@@ -568,8 +627,7 @@
         v = Math.max(v, this._collideSegment(k.x, k.fy, k.fz + 0.19, k.x, k.sy, k.sz, 0.19, KEEPER_E, KEEPER_MU, 0, k.vy * 0.5, k.vz * 0.5));
         if (v >= 0) {
           this._touch('keeper');
-          const handSpeed = Math.hypot(k.vy, k.vz);
-          if (vg >= 0 && !this.goal && sp < k.level.catchSpeed && handSpeed < 4.5) {
+          if (vg >= 0 && !this.goal && sp < k.level.catchSpeed) {
             this.caught = true; this.tCaught = this.t;
             this.events.push({ type: 'catch', speed: sp });
           } else if (v > 0.5) {
@@ -617,46 +675,194 @@
       const k = this.keeper;
       if (!k) return;
       if (k.state === 'ready' && t >= k.tReact) {
+        // two reads of the flight: the truth, and what the keeper can actually anticipate at this moment — the line
+        // and pace of the ball but only part of its bend and dip (level.read). He sees the rest of the curve only as
+        // the ball bends, so a well-struck curler fools him, and he judges on target or not from his own read.
         const pred = this._predictPlane(k.x + 0.25);
-        if (pred && Math.abs(pred.y) < C.GOAL_HALF_WIDTH + 0.9 && pred.z < C.GOAL_HEIGHT + 0.7) {
+        const seen = pred && this._predictPlane(k.x + 0.25, k.level.read);
+        if (this.cfg.keeper.rooted) {
+          k.state = 'watching';            // recreations of keepers documented as rooted to the spot: he only watches
+        } else if (pred && seen && Math.abs(seen.y) < C.GOAL_HALF_WIDTH + 0.9 && seen.z < C.GOAL_HEIGHT + 0.7) {
           k.truthY = pred.y; k.truthZ = pred.z; k.tArrive = pred.t; k.tDecide = t;
+          k.readY = seen.y; k.readZ = seen.z;
           k.state = 'moving';
         } else {
           k.state = 'watching';            // read as off target — leaves it
         }
       }
-      k.vy = 0; k.vz = 0;
-      if (k.state === 'moving') {
-        // the read of the shot sharpens as the ball gets closer
+      if (k.state === 'moving') this._keeperDecide(t);
+      this._keeperStep(t, dt);
+    }
+
+    /** Where the centre of mass must be so that the body, stretched toward (ty, tz), puts the gloves there. */
+    _keeperGoal(ty, tz) {
+      const k = this.keeper, reach = KP.TORSO + KP.ARM;
+      const ux = ty - k.cy, uz = tz - k.cz, ul = Math.hypot(ux, uz) || 1;
+      return { y: ty - reach * ux / ul, z: Math.max(KP.LYING, tz - reach * uz / ul) };
+    }
+
+    /**
+     * At the moment of decision: a stand-and-reach save, or a dive. For a dive the keeper picks the flight time:
+     * long enough to cover the distance at his top lateral speed, and, for high balls, close to the time that
+     * minimises the take-off speed needed to rise Δz (T = √(2Δz/g)), so he is near the top of his jump when the
+     * ball arrives instead of already falling. If that leaves spare time he holds his set position and takes off later.
+     */
+    _keeperDecide(t) {
+      const k = this.keeper, lv = k.level, g = this.g;
+      // at the moment of decision he has seen none of the bend yet: his own read plus his error
+      const ty = clamp(k.readY + k.errY, -3.85, 3.85);
+      const tz = clamp(k.readZ + k.errZ, 0.15, 2.7);
+      if (Math.abs(ty - k.cy) < 0.75 && tz < 2.05) { k.state = 'reach'; return; }
+      const goal = this._keeperGoal(ty, tz);
+      const T = Math.max(0.1, k.tArrive - t - lv.push);           // longest possible flight
+      const tLat = Math.abs(goal.y - k.cy) / lv.vDive;              // shortest flight that covers the distance
+      const dz = goal.z - k.cz;
+      const tUp = dz > 0 ? Math.sqrt(2 * dz / g) : 0;
+      // to a high ball he times the jump so he is near the top of it when the ball arrives (a long flat flight to cover
+      // the distance left him landing before the ball got there): the lateral flight is capped near his rise time
+      const high = tz > 1.4, tRise = lv.vUp / g;
+      const Tf = clamp(Math.max(high ? Math.min(tLat * 1.1, tRise * 1.3) : tLat * 1.1, tUp, 0.18), 0.1, T);
+      k.tTakeoff = k.tArrive - lv.push - Tf;
+      k.state = t >= k.tTakeoff ? this._keeperLaunch(t, ty, tz) : 'set';
+    }
+
+    /** Fix the launch velocity from the current read of the shot. Returns the new state. */
+    _keeperLaunch(t, ty, tz) {
+      const k = this.keeper, lv = k.level, g = this.g;
+      const goal = this._keeperGoal(ty, tz);
+      const T = Math.max(0.08, k.tArrive - t - lv.push);
+      const Te = T + lv.push * 0.5;                                 // the push also moves the body (about half speed)
+      k.launchY = clamp((goal.y - k.cy) / Te, -lv.vDive, lv.vDive);
+      // a dive needs a hop, except to a low ball: then the keeper collapses sideways onto it, the centre of mass
+      // dropping from the start (forcing a hop floated him flat above a ball going in underneath)
+      k.launchZ = clamp((goal.z - k.cz + 0.5 * g * T * T) / Te, tz < 0.9 ? -1.0 : 0.4, lv.vUp);
+      k.tPushEnd = t + lv.push;
+      k.diveLean = this._keeperLean(ty, tz);                        // the body angle he commits to at take-off
+      return 'push';
+    }
+
+    /** Advance the keeper's body by dt. */
+    _keeperStep(t, dt) {
+      const k = this.keeper, lv = k.level, g = this.g;
+      const hy0 = k.hy, hz0 = k.hz;
+      k.clock = t;                                    // read by the body animation (people.js)
+      // the read of the shot sharpens as the ball gets closer; only the arms and body angle can use it in flight
+      let ty = k.cy, tz = 1.0;
+      if (k.state !== 'ready' && k.state !== 'watching') {
         const frac = clamp((k.tArrive - t) / Math.max(1e-3, k.tArrive - k.tDecide), 0, 1);
-        const ty = clamp(k.truthY + k.errY * frac, -3.85, 3.85);
-        const tz = clamp(k.truthZ + k.errZ * frac, 0.2, 2.6);
-        const dy = ty - k.hy, dz = tz - k.hz, dist = Math.hypot(dy, dz);
-        k.speed = Math.min(k.level.vmax, k.speed + k.level.acc * dt);
-        const stepLen = k.speed * dt;
-        if (dist <= stepLen || dist < 1e-9) {
-          k.vy = dy / dt; k.vz = dz / dt; k.hy = ty; k.hz = tz;
-        } else {
-          k.vy = (dy / dist) * k.speed; k.vz = (dz / dist) * k.speed;
-          k.hy += k.vy * dt; k.hz += k.vz * dt;
+        // the bend he could not anticipate shows itself late (most of a curve happens in the last part of the flight)
+        const shown = Math.pow(1 - frac, 1.6);
+        ty = clamp(k.readY + (k.truthY - k.readY) * shown + k.errY * frac, -3.85, 3.85);
+        tz = clamp(k.readZ + (k.truthZ - k.readZ) * shown + k.errZ * frac, 0.15, 2.7);
+      }
+      const holding = this.caught;
+      const busy = k.state !== 'ready' && k.state !== 'watching';
+
+      if (k.state === 'set') {
+        // set position: a short shuffle toward the ball's side while waiting to take off
+        k.cvy = clamp((ty - k.cy) * 2, -1.0, 1.0);
+        k.cy += k.cvy * dt;
+        k.theta = turnToward(k.theta, 0, lv.spin * dt);
+        if (t + dt >= k.tTakeoff) k.state = this._keeperLaunch(t, ty, tz);
+      } else if (k.state === 'reach') {
+        // feet stay down: shuffle sideways, crouch for low balls, lean a little toward the ball
+        const wantY = ty - clamp(ty - k.cy, -0.25, 0.25);
+        k.cvy = clamp((wantY - k.cy) / 0.08, -KP.SHUFFLE, KP.SHUFFLE);
+        k.cy += k.cvy * dt;
+        const wantZ = clamp(tz + 0.15, 0.6, KEEPER_REST_Z + 0.05);
+        const dz = clamp(wantZ - k.cz, -2.5 * dt, 2.5 * dt);
+        k.cz += dz; k.cvz = dz / dt;
+        k.leg = k.cz - KP.ANKLE;
+        k.theta = turnToward(k.theta, clamp(Math.atan2(ty - k.cy, 1.6), -0.35, 0.35), lv.spin * dt);
+      } else if (k.state === 'push') {
+        // feet planted: the ground supplies whatever force brings C to the launch velocity
+        const left = Math.max(dt, k.tPushEnd - t);
+        k.cvy += (k.launchY - k.cvy) * dt / left;
+        k.cvz += (k.launchZ - k.cvz) * dt / left;
+        k.cy += k.cvy * dt; k.cz += k.cvz * dt;
+        k.leg = Math.min(KP.LEG, k.leg + 0.6 * dt);
+        k.theta = turnToward(k.theta, this._keeperLean(ty, tz) * 0.5, lv.spin * dt);
+        if (t + dt >= k.tPushEnd) k.state = 'air';
+      } else if (k.state === 'air') {
+        // projectile: gravity is the only force on the centre of mass
+        k.cvz -= g * dt;
+        k.cy += k.cvy * dt; k.cz += k.cvz * dt;
+        k.leg = Math.min(KP.LEG, k.leg + 0.6 * dt);
+        // the body angle is committed at take-off: in the air it can only adjust a little toward a late read (a body
+        // cannot turn itself round in flight — before, a late read of the curl swung him upright mid-air); the
+        // arms do the rest
+        if (t < k.tArrive + 0.15) {
+          const d0 = k.diveLean !== undefined ? k.diveLean : k.theta;
+          k.theta = turnToward(k.theta, clamp(this._keeperLean(ty, tz), d0 - 0.3, d0 + 0.3), lv.spin * dt);
         }
-        if (t > k.tArrive + 0.2 || this.caught) k.state = 'landing';
-      } else if (k.state === 'landing') {
-        const dove = Math.abs(k.hy - k.y0) > 0.9;
-        const floor = dove ? 0.28 : Math.min(k.hz, KEEPER_REST_Z);
-        if (k.hz > floor) {
-          k.fallV += g * dt;
-          k.hz = Math.max(floor, k.hz - k.fallV * dt);
-          k.vz = k.hz > floor ? -k.fallV : 0;
+        // once the ball has crossed, the body keeps its dive and tips toward its side as it falls (tracking the
+        // crossing point, now above him, swung him upright in mid-air and dropped him feet-first)
+        else if (Math.abs(k.theta) > 0.3) k.theta = turnToward(k.theta, Math.sign(k.theta) * Math.max(Math.abs(k.theta), 1.3), 1.5 * dt);
+      } else if (k.state === 'down') {
+        // lying on the grass: slide to a stop, settle flat
+        const sp = Math.abs(k.cvy), dec = KP.FRICTION * dt;
+        k.cvy = sp <= dec ? 0 : k.cvy - Math.sign(k.cvy) * dec;
+        k.cy += k.cvy * dt; k.cvz = 0;
+        const side = Math.sign(k.theta) || 1;
+        k.theta = turnToward(k.theta, side * Math.PI / 2, 2.5 * dt);
+        // a keeper does not lie there: once he has stopped sliding and the ball is gone (or safe in his hands),
+        // he gets back to his feet
+        // (with the ball caught he stays down, clutching it)
+        if (t - k.tLand > 0.6 && k.cvy === 0 && t > k.tArrive + 0.4 && !this.caught) { k.state = 'getup'; k.tGetup = t; }
+      } else if (k.state === 'getup') {
+        // roll up onto the knees and stand: the body turns upright and the legs come back under him
+        // (the ground constraint below lifts the centre of mass as the body rotates)
+        k.cvy = 0; k.cvz = 0;
+        k.leg += (KP.LEG_READY - k.leg) * Math.min(1, 3 * dt);
+        k.theta = turnToward(k.theta, 0, 2.2 * dt);
+        if (Math.abs(k.theta) < 0.02) k.state = 'stand';
+      } else if (k.state === 'stand') {
+        const dec = 6 * dt;
+        k.cvy = Math.abs(k.cvy) <= dec ? 0 : k.cvy - Math.sign(k.cvy) * dec;
+        k.cy += k.cvy * dt; k.cvz = 0;
+        k.theta = turnToward(k.theta, 0, 3 * dt);
+      }
+
+      // the ground: neither the feet nor the head may go below it
+      const zMin = keeperMinZ(k);
+      if (k.cz < zMin) {
+        k.cz = zMin;
+        if (k.state === 'air' && k.cvz < 0) {
+          k.cvz = 0; k.tLand = t;
+          k.state = Math.abs(k.theta) > 0.5 || Math.abs(k.cvy) > 1.5 ? 'down' : 'stand';
         }
       }
+
+      // arms: point at the expected crossing (or hold the ball once it is caught). In the set position the arms
+      // stay low and wide — a keeper does not reach before he has taken off.
+      const after = (k.state === 'getup' || k.state === 'stand' || k.state === 'down') && t > k.tArrive + 0.2;
+      if (after && !holding) {
+        // the moment has passed: lying, the arms settle along the grass beyond his head; getting up or standing they
+        // come down to his sides (instead of reaching for a ball that has gone)
+        k.phi = turnToward(k.phi, k.state === 'down' ? k.theta : Math.PI, 4 * dt);
+        k.armExt += clamp((k.state === 'down' ? KP.ARM * 0.85 : KP.ARM_REST) - k.armExt, -1.5 * dt, 1.5 * dt);
+      } else if (busy && !holding && k.state !== 'set') {
+        const sy = k.cy + KP.TORSO * Math.sin(k.theta), sz = k.cz + KP.TORSO * Math.cos(k.theta);
+        const wantPhi = Math.atan2(ty - sy, tz - sz);
+        k.phi = turnToward(k.phi, wantPhi, lv.arm * dt);
+        const wantExt = k.state === 'reach' ? clamp(Math.hypot(ty - sy, tz - sz), 0.3, KP.ARM) : KP.ARM;
+        k.armExt += clamp(wantExt - k.armExt, -3 * dt, 3 * dt);
+      }
       keeperPose(k);
+      k.vy = (k.hy - hy0) / dt; k.vz = (k.hz - hz0) / dt;
+    }
+
+    /** Body angle that points the head and arms at the target. */
+    _keeperLean(ty, tz) {
+      const k = this.keeper;
+      return clamp(Math.atan2(ty - k.cy, tz - k.cz), -1.75, 1.75);
     }
 
     /** Where (and when) the ball will cross the plane x = xp, ignoring obstacles and knuckling. */
-    _predictPlane(xp) {
+    _predictPlane(xp, magnusScale = 1) {
       const sim = new Simulation(this.cfg, { dt: 0.004, obstacles: false, record: false, state: this.s });
       sim.useKnuckle = false;
+      sim.magnusScale = magnusScale;
       sim.t = this.t;
       const tEnd = this.t + 3;
       while (sim.t < tEnd && sim.s[0] > xp && !sim.atRest) sim.step();
@@ -784,6 +990,21 @@
       };
     }
 
+    /**
+     * Forces on the ball right now, in newtons, from the SAME derivative the integrator uses (no second model).
+     * total = gravity + drag + magnus + knuckle + contact, where `contact` is the net-membrane force (0 in free flight).
+     * Ground/post/body impacts are impulses, not forces, so they are not included.
+     */
+    forces() {
+      const o = this._k1, F = this._F, m = M;
+      this._deriv(this.s, o);
+      const v = (i) => [m * F[i], m * F[i + 1], m * F[i + 2]];
+      const g = [0, 0, -m * this.g], d = v(0), mg = v(3), kn = v(6);
+      const total = [m * o[3], m * o[4], m * o[5]];
+      const contact = [0, 1, 2].map((i) => total[i] - g[i] - d[i] - mg[i] - kn[i]);
+      return { gravity: g, drag: d, magnus: mg, knuckle: kn, contact, total };
+    }
+
     /** Instantaneous aerodynamic quantities, for telemetry. */
     aero() {
       const s = this.s;
@@ -796,7 +1017,7 @@
       out.S = R * Math.hypot(cx, cy, cz) / (sp * sp);
       out.Re = this.rho * sp * 2 * R / this.mu;
       const qA = 0.5 * this.rho * AREA * sp * sp;
-      if (this.useDrag) { out.Cd = dragCoefficient(out.Re, out.S); out.drag = qA * out.Cd; }
+      if (this.useDrag) { out.Cd = dragCoefficient(out.Re, out.S, this.aeroP); out.drag = qA * out.Cd; }
       if (this.useMagnus) { out.Cl = liftCoefficient(out.S); out.magnus = qA * out.Cl; }
       return out;
     }
@@ -867,6 +1088,26 @@
     return { azimuth: az, elevation: el, converged: ok, miss };
   }
 
+  /**
+   * Boot–ball impact (optional "strike from the boot" mode). A rigid-body collision with restitution e between the
+   * foot (effective mass Mf moving at footSpeed) and the ball, hit at a perpendicular offset d from its centre
+   * (dx: + = right of centre as the kicker sees it → curls left; dy: + = above centre → topspin).
+   *   effective ball mass at the contact point: m* = m / (1 + m d² / I)
+   *   impulse J = (1 + e) v_foot / (1/Mf + 1/m*);  ball speed v = J/m;  spin ω = J d / I
+   * An off-centre hit trades speed for spin, which is the trade-off players feel. This is a point-impulse model:
+   * it ignores the ~10 ms of deformation and the foot's rotation, so treat the spin as an upper estimate.
+   */
+  function strikeFromBoot(footSpeed, dx, dy, opts) {
+    opts = opts || {};
+    const Mf = opts.footMass || 1.6, e = opts.restitution !== undefined ? opts.restitution : 0.5;
+    const d = Math.hypot(dx, dy);
+    const mStar = M / (1 + (M * d * d) / INERTIA);
+    const J = ((1 + e) * footSpeed) / (1 / Mf + 1 / mStar);
+    const v = J / M, w = (J * d) / INERTIA;
+    const ux = d > 0 ? dx / d : 0, uy = d > 0 ? dy / d : 0;
+    return { speed: v, sideSpin: -(w * ux) / TWO_PI, topSpin: (w * uy) / TWO_PI, ratio: v / footSpeed, offset: d };
+  }
+
   /** Perturb a kick with execution scatter (in place). */
   function applyNoise(kick, sigma, rng) {
     if (!sigma) return kick;
@@ -896,11 +1137,11 @@
   }
 
   return {
-    C, SURFACES, KEEPER_LEVELS, NOISE_LEVELS,
+    C, SURFACES, KEEPER_LEVELS, NOISE_LEVELS, AERO_DEFAULT,
     BALL_INERTIA: INERTIA, BALL_AREA: AREA, POST_Y, BAR_Z,
     Simulation, atmosphere, dragCoefficient, liftCoefficient,
     defaultConfig, cloneConfig, clampBallPosition, launchState,
-    simulateFlight, solveAim, monteCarlo, applyNoise,
+    simulateFlight, solveAim, monteCarlo, applyNoise, strikeFromBoot,
     mulberry32, gaussian, clamp,
   };
 });
