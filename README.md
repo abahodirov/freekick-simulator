@@ -13,7 +13,7 @@ Curl it, dip it, or knuckle it past the wall and the keeper. Every flight obeys 
 ![Dependencies](https://img.shields.io/badge/dependencies-none-lightgrey)
 ![WebGL2](https://img.shields.io/badge/WebGL2-3D-orange)
 
-<img src="docs/screenshot.png" alt="Version 2: lining up a free kick from behind the ball, with a four-player wall and the keeper in a full stadium" width="860">
+<img src="docs/screenshot-v2.png" alt="Version 2: lining up a free kick from behind the ball, with a four-player wall and the keeper in a full stadium" width="860">
 
 </div>
 
