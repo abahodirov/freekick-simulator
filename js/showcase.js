@@ -22,7 +22,8 @@
       'Eight panels moulded into curves, with fine grooves meant to steady its flight.',
       'Eleven colours: one per player in a team, and for South Africa\'s 11 official languages.',
       'Goalkeepers hated it: its drag crisis falls right at typical shot speeds, so long shots wobbled and dipped.',
-      'In the wind tunnel it was also the most sensitive to which way its panels faced the air.'] },
+      'In the wind tunnel it was also the most sensitive to which way its panels faced the air.',
+      'Here too: hit it with almost no spin (Knuckleball) and it wobbles about twice as far as the other balls, and swerves late as it slows.'] },
     { id: 'engine', name: 'Classic', meta: '32 panels · the Telstar pattern, 1970', facts: [
       '12 black pentagons and 20 white hexagons: a truncated icosahedron.',
       'Black and white so it showed up on black-and-white television at the 1970 World Cup.',
@@ -31,6 +32,8 @@
 
   // the Trionda is the ball in play unless something else was chosen
   if (!A.cfg.ballId) { A.cfg.ballId = 'trionda'; A.configChanged(); }
+  // a ball chosen another way (#ball=…) still flies with its own aerodynamics
+  else if (!A.cfg.aero && window.FKBalls) { const a = FKBalls.aeroFor(A.cfg.ballId, 'A', FK.AERO_DEFAULT); if (a) { A.cfg.aero = a; A.configChanged(); } }
 
   // (if the logo's own 3-D view cannot start, the showcase still works around a stand-in)
   let logo;

@@ -50,12 +50,12 @@ world, mirrors them for left-footers, blends where they meet and rebuilds the bo
 
 ## Ball models
 
-The match balls are 3-D models supplied by the project owner, converted with `tools/ball_model.js` (glTF/OBJ/binary
+The match balls are 3-D models purchased by the project owner, converted with `tools/ball_model.js` (glTF/OBJ/binary
 FBX → `assets/balls/<id>.js`, textures downsized to 2048 px JPEG) and baked onto a sphere map for the in-game ball with
-`tools/ball_bake.py`:
-- **Classic ball** ("Soccer ball / Football"): by RPSebb, https://sketchfab.com/3d-models/soccer-ball-football-bd5708568d9042bf8b0e4893a416e92e,
-  Sketchfab Standard licence.
-- **Jabulani**: a Sketchfab download (FBX + 3K textures); author and licence were not included in the files.
-- **Trionda**: "Trionda 2026.glb" (exported from Blender); author and licence were not included. Its texture names
-  (`ball951_…`) suggest it was extracted from a commercial video game; check its rights before distributing.
+`tools/ball_bake.py`, which also bakes each model's normal map (grooves and surface relief) into a sphere normal map:
+- **Jabulani**: FBX + 3K colour and normal textures (`Jabula_3k.png`, `Jabula_3k_Normal.png`).
+- **Trionda**: "Trionda 2026.glb", with its embedded colour and normal maps.
+- **Classic ball** ("Soccer ball / Football", by RPSebb on Sketchfab): its texture is plain black and white, so the
+  classic ball is now drawn procedurally (js/render.js, js/ballview.js) with seam grooves, stitching, domed panels and
+  a pebbled skin; the model file is no longer shipped. Rebuild it any time with `tools/ball_model.js`.
 The ball designs themselves belong to adidas.

@@ -537,3 +537,31 @@ place and the panel seams cut through the graphics. The ball is now rebuilt from
 before); its seams, from the model's own panel cuts (`ball_model.js --seam-uv 0`), run through the white ribbons as on
 the real ball. `ball_model.js` gained `--uv N` / `--seam-uv M` (the model has two UV sets; both map the colour the same
 way) and `ball_bake.py` draws seams from the seam UV set and no longer stores the sphere map twice.
+
+## 31. Stage 34: celebrations switch, the keeper's eyes, grooves you can see, a wilder Jabulani
+
+- **Celebrations** can be switched off: More → Match → "Goal celebrations", or the C key. The choice is remembered
+  (localStorage); switching off also ends one that is under way.
+- **Keeper camera** (dock button "Keeper", key 5): the view from the goalkeeper's eyes, taken from his head in
+  `keeperBody` every frame. It crouches, shuffles and dives with him, always looks at the ball (back out at the pitch
+  once the ball is past him), and carries a softened share of his head's roll into the horizon during a dive. The
+  celebration camera does not take over while you watch through his eyes.
+- **Experiments tab removed** (the Experiment lab code in `js/labs.js` with it). The Ball lab and the free-kick
+  exhibition stay.
+- **Ball relief.** `tools/ball_model.js` now keeps a model's normal map (glTF `normalTexture`, or `--normal` for
+  FBX/OBJ). `tools/ball_bake.py` bakes it like the colour: per triangle it builds the texture's tangent axes from the
+  UVs, lays them onto the sphere at every pixel and stores object-space normals by direction ("sphereNormal"). The
+  green-axis convention (OpenGL/DirectX, and FBX/OBJ's flipped v) is detected as the one whose sideways tilt is
+  curl-free, as a height field's must be (Trionda: curl/div 0.42 vs 1.20; Jabulani 0.14 vs 1.18). The game ball and
+  the viewer tilt the normal by the map (×1.6), shade the grooves, and add a fine pebbled grain that fades out below
+  pixel size. Trionda and Jabulani now show their panel grooves, raised graphics and textured skin.
+- **Classic ball** is procedural, matched in game and viewer: seam grooves 1.3 mm deep (the normal tilts into the
+  seam along the gradient of the panel-distance field), a smooth dome on every panel, stitch dimples along both sides
+  of each seam (shown only when larger than a pixel), soft shadow by the seams, pebbled skin, faint scuffs. The viewer's
+  hexagon centres were the wrong dual of its pentagons (panels looked like triangles); they now match the game.
+- **Jabulani knuckle.** The knuckle force now takes per-ball parameters (`knCl`, `knSpin`, `knFreq`, `knTrans`;
+  defaults reproduce the old model bit for bit). The Jabulani gets a stronger side force (0.27 vs 0.13), keeps knuckling
+  with more spin, changes direction faster, and swerves harder while its flow passes through its drag crisis
+  (Re ≈ 3.3×10⁵, about 23 m/s, at the end of a free kick). Over 40 seeded 31 m/s knuckleballs from 25 m the rms
+  sideways spread at the goal is 0.35 m (max 0.55 m) against 0.18 m (0.25 m) for the other balls. These are model
+  values, not measurements. `#ball=` now also applies the ball's aerodynamics.

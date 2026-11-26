@@ -120,7 +120,11 @@
   }
 
   /** Default drag-crisis parameters (engine fit). A ball model (js/balls.js) may override them via cfg.aero. */
-  const AERO_DEFAULT = Object.freeze({ cdSub: CD_SUB, cdSuper: CD_SUPER, reCrit: RE_CRIT, reWidth: RE_WIDTH });
+  // knuckle model per ball: knCl peak side-force coefficient, knSpin spin parameter where it dies out, knFreq how fast
+  // the side force changes along the path, knTrans extra force while the flow is in the drag-crisis transition
+  // (asymmetric, unstable boundary-layer separation — the Jabulani's notorious late swerve)
+  const AERO_DEFAULT = Object.freeze({ cdSub: CD_SUB, cdSuper: CD_SUPER, reCrit: RE_CRIT, reWidth: RE_WIDTH,
+    knCl: KNUCKLE_CL, knSpin: KNUCKLE_SPIN_LIMIT, knFreq: 1, knTrans: 0 });
 
   function dragCoefficient(Re, S, a) {
     a = a || AERO_DEFAULT;
@@ -415,18 +419,20 @@
         }
         if (this.useKnuckle) {
           const wmag = Math.sqrt(wx * wx + wy * wy + wz * wz);
-          let kf = 1 - (R * wmag / sp) / KNUCKLE_SPIN_LIMIT;
+          const ap = this.aeroP;
+          let kf = 1 - (R * wmag / sp) / ap.knSpin;
           const h = Math.sqrt(rx * rx + ry * ry);
           if (kf > 0 && h > 1e-6) {
             kf *= kf;
-            const supercritical = 1 / (1 + Math.exp(-(Re - this.aeroP.reCrit) / this.aeroP.reWidth));
-            const ck = KNUCKLE_CL * kf * supercritical;
+            const supercritical = 1 / (1 + Math.exp(-(Re - ap.reCrit) / ap.reWidth));
+            const zt = (Re - ap.reCrit) / 5e4, trans = ap.knTrans * Math.exp(-zt * zt);
+            const ck = ap.knCl * kf * Math.min(1, supercritical + trans * 0.5) * (1 + trans);
             // lateral basis ⟂ to the airflow: e1 = horizontal right, e2 = up-ish
             const e1x = ry / h, e1y = -rx / h;
             const e2x = e1y * rz / sp, e2y = -e1x * rz / sp, e2z = h / sp;
-            const ph = this.knTheta * 4;
-            const c1 = Math.sin(this.kp1 + ph + this.pathLen * this.kk1);
-            const c2 = 0.6 * Math.sin(this.kp2 + 0.7 * ph + this.pathLen * this.kk2);
+            const ph = this.knTheta * 4, pl = this.pathLen * ap.knFreq;
+            const c1 = Math.sin(this.kp1 + ph + pl * this.kk1);
+            const c2 = 0.6 * Math.sin(this.kp2 + 0.7 * ph + pl * this.kk2);
             const k = q * ck * sp;
             ax += k * (c1 * e1x + c2 * e2x);
             ay += k * (c1 * e1y + c2 * e2y);

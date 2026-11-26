@@ -29,6 +29,15 @@ test('keeper camera sits at the goal line at standing eye height and faces the b
   ok(t.eye[0] < 1 && t.eye[2] > 1.5 && t.eye[2] < 2, 'eye position');
   ok(t.target[0] > 20, 'does not face the ball');
 });
+test('keeper camera with his head: at his eyes, looking at the ball, tilting with a dive', () => {
+  const head = { pos: [0.3, 1.2, 1.1], F: [1, 0, 0], U: [0, 0.6, 0.8] };
+  const t = CAM.desired('keeper', ctx({ keeperHead: head }));
+  ok(Math.hypot(t.eye[0] - 0.4, t.eye[1] - 1.2, t.eye[2] - 1.13) < 0.05, 'eye not at the head');
+  ok(t.target[0] === 24 && t.target[1] === 5, 'not looking at the ball');
+  ok(t.up[1] > 0.2, 'no tilt from the head roll');
+  const back = CAM.desired('keeper', ctx({ keeperHead: head, s: [-1, 0, 0.5, -5, 0, 0, 0, 0, 0] }));
+  ok(back.target[0] > 5, 'turns round to a ball in the net');
+});
 test('side camera looks along the goal line, across the path', () => {
   const t = CAM.desired('side', ctx()), v = sub(t.target, t.eye);
   ok(Math.abs(v[1]) > 30 && Math.abs(v[0]) < 1e-9, 'not a pure side view');

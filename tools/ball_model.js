@@ -10,7 +10,7 @@ const fs = require('fs'), path = require('path');
 const argv = process.argv.slice(2), opt = {};
 for (let i = 0; i < argv.length; i++) if (argv[i].startsWith('--')) { opt[argv[i].slice(2)] = argv[i + 1]; argv.splice(i, 2); i--; }
 const [id, file, outDir = path.join(__dirname, '..', 'assets', 'balls')] = argv;
-if (!id || !file) { console.error('usage: node tools/ball_model.js <id> <model.glb|model.gltf|model.obj|model.fbx> [out dir] [--texture image]'); process.exit(1); }
+if (!id || !file) { console.error('usage: node tools/ball_model.js <id> <model.glb|model.gltf|model.obj|model.fbx> [out dir] [--texture image] [--normal image] [--uv N] [--seam-uv M]'); process.exit(1); }
 
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
 const out = { positions: [], normals: [], uvs: [], indices: [], texture: null };
@@ -73,6 +73,8 @@ function loadGltf(json, bin, dir) {
       const mat = pr.material !== undefined && json.materials[pr.material];
       const bt = mat && mat.pbrMetallicRoughness && mat.pbrMetallicRoughness.baseColorTexture;
       if (!out.texture && bt) out.texture = image(bt.index);
+      // the normal map carries the grooves and surface texture; ball_bake.py turns it into a sphere normal map
+      if (!out.normalTexture && mat && mat.normalTexture) out.normalTexture = image(mat.normalTexture.index);
     }
     for (const c of nd.children || []) visit(c, M);
   };
@@ -189,6 +191,8 @@ else if (ext === '.obj') loadObj(raw.toString('utf8'), dir);
 else if (ext === '.fbx') loadFbx(raw);
 else { console.error('unsupported format ' + ext + ' (use .glb, .gltf, .obj or binary .fbx)'); process.exit(1); }
 if (opt.texture) out.texture = `data:${MIME[path.extname(opt.texture).toLowerCase()] || 'image/jpeg'};base64,` + fs.readFileSync(opt.texture).toString('base64');
+// --normal <image>: the model's tangent-space normal map, when the format does not embed it (FBX, OBJ)
+if (opt.normal) out.normalTexture = `data:${MIME[path.extname(opt.normal).toLowerCase()] || 'image/png'};base64,` + fs.readFileSync(opt.normal).toString('base64');
 
 // centre and scale to a unit sphere; normals recomputed if missing
 const n = out.positions.length / 3, c = [0, 0, 0];

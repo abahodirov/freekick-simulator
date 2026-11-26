@@ -24,18 +24,45 @@
   const FS = `#version 300 es
   precision highp float;
   in vec3 vL; in vec3 vN; in vec2 vUV;
-  uniform int uBall, uTex; uniform sampler2D uImg; uniform vec3 uPC[12]; uniform vec3 uHC[20];
+  uniform int uBall, uTex, uNrmOn; uniform sampler2D uImg, uNrmMap; uniform vec3 uPC[12]; uniform vec3 uHC[20];
+  uniform mat3 uR;
   out vec4 o;
   float hash3(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+  float vnoise(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    float a = mix(mix(hash3(i), hash3(i + vec3(1,0,0)), f.x), mix(hash3(i + vec3(0,1,0)), hash3(i + vec3(1,1,0)), f.x), f.y);
+    float b = mix(mix(hash3(i + vec3(0,0,1)), hash3(i + vec3(1,0,1)), f.x), mix(hash3(i + vec3(0,1,1)), hash3(i + vec3(1,1,1)), f.x), f.y);
+    return mix(a, b, f.z); }
+  // pebbled skin: a small random tilt in the tangent plane, faded out below pixel size (as in the game)
+  vec3 grain(vec3 p, float amt) {
+    vec3 q = p * 140.0, g = vec3(vnoise(q), vnoise(q + 17.3), vnoise(q + 41.7)) - 0.5;
+    g -= p * dot(g, p);
+    return g * amt * (1.0 - smoothstep(0.35, 1.1, length(fwidth(q))));
+  }
+  vec3 tilt;                                            // surface relief of the pattern: the normal is p + tilt
   vec3 pattern(vec3 p, out float seam) {
-    seam = 0.0;
-    if (uBall == 0) {                                   // classic: 12 pentagons + 20 hexagons
-      float s1 = -2.0, s2 = -2.0, pent = 0.0;
-      for (int i = 0; i < 12; i++) { float s = dot(p, uPC[i]); if (s > s1) { s2 = s1; s1 = s; pent = 1.0; } else if (s > s2) s2 = s; }
-      for (int i = 0; i < 20; i++) { float s = dot(p, uHC[i]) * 1.01174; if (s > s1) { s2 = s1; s1 = s; pent = 0.0; } else if (s > s2) s2 = s; }
+    seam = 0.0; tilt = vec3(0.0);
+    if (uBall == 0) {
+      // classic: 12 pentagons + 20 hexagons of stitched leather, real seam grooves, puffed panels, stitch dimples
+      // beside each seam, pebbled and lightly scuffed skin (same model as the game ball, js/render.js)
+      float s1 = -2.0, s2 = -2.0, pent = 0.0; vec3 c1 = p, c2 = p;
+      for (int i = 0; i < 12; i++) { float s = dot(p, uPC[i]); if (s > s1) { s2 = s1; c2 = c1; s1 = s; c1 = uPC[i]; pent = 1.0; } else if (s > s2) { s2 = s; c2 = uPC[i]; } }
+      for (int i = 0; i < 20; i++) { vec3 c = uHC[i] * 1.01174; float s = dot(p, c); if (s > s1) { s2 = s1; c2 = c1; s1 = s; c1 = c; pent = 0.0; } else if (s > s2) { s2 = s; c2 = c; } }
       float gap = s1 - s2, fw = fwidth(gap) + 1e-5;
-      seam = 1.0 - smoothstep(0.004, 0.006 + 2.0 * fw, gap);
-      return mix(vec3(0.95, 0.95, 0.94), vec3(0.05, 0.05, 0.065), pent) * mix(0.82, 1.0, smoothstep(0.0, 0.06, gap));
+      vec3 g = c1 - c2; g -= p * dot(g, p);
+      const float W = 0.0075, D = 0.012, PF = 0.006, G0 = 0.0135, SG = 0.0028, DS = 0.0025;
+      float e = exp(-(gap * gap) / (W * W));
+      float dh = D * 2.0 * gap / (W * W) * e * clamp(W / (1.6 * fw), 0.0, 1.0);
+      float along = fract(abs(dot(p, normalize(cross(c1, c2)))) * 52.0);
+      float row = exp(-pow((gap - G0) / SG, 2.0)), dash = smoothstep(0.32, 0.12, abs(along - 0.5));
+      float sw = clamp(SG / (1.6 * fw), 0.0, 1.0), hole = row * dash * sw;
+      dh += DS * dash * sw * 2.0 * (gap - G0) / (SG * SG) * row;
+      tilt = -dh * g - PF * 30.0 * (c1 - p * dot(c1, p)) + grain(p, pent > 0.5 ? 0.035 : 0.06);   // + a dome per panel
+      seam = (1.0 - smoothstep(0.0025, 0.0025 + 2.0 * fw + 0.003, gap)) * 0.85;
+      vec3 panel = pent > 0.5 ? vec3(0.035, 0.037, 0.045) : vec3(0.93, 0.925, 0.9);
+      panel *= 1.0 - 0.3 * exp(-(gap * gap) / (6.0 * W * W));
+      float sc = vnoise(p * 9.0) * 0.5 + vnoise(p * 60.0) * 0.5;
+      panel = mix(panel, panel * vec3(0.9, 0.89, 0.86), smoothstep(0.6, 0.85, sc) * (1.0 - pent) * 0.45);
+      return panel * (1.0 - 0.35 * hole);
     }
     if (uBall == 4) {                                   // trionda: 4 panels on a tetrahedron, wave graphics in host colours
       vec3 T[4] = vec3[4](normalize(vec3(1, 1, 1)), normalize(vec3(1, -1, -1)), normalize(vec3(-1, 1, -1)), normalize(vec3(-1, -1, 1)));
@@ -86,10 +113,25 @@
     return col * (0.96 + 0.06 * hash3(floor(p * 160.0)));
   }
   void main() {
-    vec3 N = normalize(vN), V = vec3(0, 0, 1);
+    vec3 N = normalize(vN), V = vec3(0, 0, 1), p = normalize(vL);
     float seam; vec3 base;
-    if (uTex == 1) { base = texture(uImg, vUV).rgb; seam = 0.0; }
-    else base = pattern(normalize(vL), seam);
+    if (uTex == 1) {
+      base = texture(uImg, vUV).rgb; seam = 0.0; tilt = grain(p, 0.05);
+      if (uNrmOn == 1) {
+        // the model's relief, baked by direction (tools/ball_bake.py): sampled with seam-free gradients
+        float lu = atan(p.z, p.x) / 6.2831853, lv = acos(clamp(p.y, -1.0, 1.0)) / 3.1415927;
+        vec2 uv = vec2(fract(lu), lv), uv2 = vec2(fract(lu + 0.5), lv);
+        vec2 dx = dFdx(uv), dy = dFdy(uv), dx2 = dFdx(uv2), dy2 = dFdy(uv2);
+        if (abs(dx2.x) < abs(dx.x)) dx.x = dx2.x;
+        if (abs(dy2.x) < abs(dy.x)) dy.x = dy2.x;
+        vec3 nO = textureGrad(uNrmMap, uv, dx, dy).rgb * 2.0 - 1.0;
+        float up = dot(nO, p);
+        tilt += 1.6 * (nO - p * up);
+        base *= 1.0 - 0.45 * smoothstep(0.015, 0.25, 1.0 - up);
+      }
+    }
+    else base = pattern(p, seam);
+    N = normalize(uR * normalize(p + tilt));
     base = mix(base, vec3(0.12, 0.12, 0.13), seam);
     // studio light: a soft key from the upper left, a cool fill, sky/ground ambience, a satin (not glossy) sheen
     vec3 L1 = normalize(vec3(-0.55, 0.7, 0.55)), L2 = normalize(vec3(0.85, -0.1, 0.45));
@@ -122,7 +164,8 @@
     const ico = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]].map(n);
     const it = 1 / t, dod = [];
     for (const a of [-1, 1]) for (const b of [-1, 1]) for (const c of [-1, 1]) dod.push(n([a, b, c]));
-    for (const a of [-1, 1]) for (const b of [-1, 1]) { dod.push(n([0, a * it, b * t])); dod.push(n([a * it, b * t, 0])); dod.push(n([a * t, 0, b * it])); }
+    // (the dual of this icosahedron: the same layout as the game ball's HEX in js/render.js)
+    for (const a of [-1, 1]) for (const b of [-1, 1]) { dod.push(n([0, b * t, a * it])); dod.push(n([b * t, a * it, 0])); dod.push(n([a * it, 0, b * t])); }
     return { pc: ico.flat(), hc: dod.flat() };
   }
   const rotY = (a) => [Math.cos(a), 0, -Math.sin(a), 0, 1, 0, Math.sin(a), 0, Math.cos(a)];
@@ -140,7 +183,7 @@
       const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
       if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
       this.pr = pr; this.u = {};
-      for (const n of ['uR', 'uAspect', 'uZoom', 'uBall', 'uTex', 'uImg', 'uPC', 'uHC']) this.u[n] = gl.getUniformLocation(pr, n);
+      for (const n of ['uR', 'uAspect', 'uZoom', 'uBall', 'uTex', 'uImg', 'uPC', 'uHC', 'uNrmOn', 'uNrmMap']) this.u[n] = gl.getUniformLocation(pr, n);
       gl.useProgram(pr);
       const cc = classicCentres(); gl.uniform3fv(this.u.uPC, cc.pc); gl.uniform3fv(this.u.uHC, cc.hc);
       this.sphere = this._mesh(sphere(96, 64));
@@ -175,10 +218,17 @@
       if (!src) return (this.models[id] = null);
       // a painted texture on the viewer's own sphere ({sphere: true}), or a full mesh with its own UVs
       const gl = this.gl, m = src.sphere ? Object.assign({}, this.sphere) : this._mesh(src);
-      m.tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, m.tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([240, 240, 240, 255]));
-      const img = new Image(); img.onload = () => { gl.bindTexture(gl.TEXTURE_2D, m.tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img); gl.generateMipmap(gl.TEXTURE_2D);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); }; img.src = src.texture;
+      const load = (url, wrapS) => {
+        const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([240, 240, 240, 255]));
+        const img = new Image(); img.onload = () => { gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img); gl.generateMipmap(gl.TEXTURE_2D);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+          if (wrapS) { gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); }
+          if (wrapS) m.nrmReady = true; };
+        img.src = url; return t;
+      };
+      m.tex = load(src.texture);
+      if (src.sphereNormal) m.nrm = load(src.sphereNormal, true);       // the grooves and relief (by direction)
       return (this.models[id] = m);
     }
     setBall(id) { this.ball = id; }
@@ -208,6 +258,9 @@
       gl.uniform1i(this.u.uBall, PATTERN[this.ball] !== undefined ? PATTERN[this.ball] : 0);
       gl.uniform1i(this.u.uTex, model ? 1 : 0);
       if (model) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, model.tex); gl.uniform1i(this.u.uImg, 0); }
+      const nrm = model && model.nrm && model.nrmReady;
+      if (nrm) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, model.nrm); gl.uniform1i(this.u.uNrmMap, 1); gl.activeTexture(gl.TEXTURE0); }
+      gl.uniform1i(this.u.uNrmOn, nrm ? 1 : 0);
       const m = model || this.sphere;
       gl.bindVertexArray(m.vao); gl.drawElements(gl.TRIANGLES, m.count, m.type, 0); gl.bindVertexArray(null);
     }

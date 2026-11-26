@@ -1,5 +1,5 @@
 /*
- * Free Kick Simulator — the labs: Ball Laboratory, Experiment Lab and the historical exhibition.
+ * Free Kick Simulator — the labs: Ball Laboratory and the historical exhibition.
  * Every number shown here comes from the physics engine (FK.simulateFlight / FK.Simulation) run on the
  * user's current set-up; nothing is a separate approximation. Overlays are drawn through FKApp.extraRibbons.
  */
@@ -33,7 +33,6 @@
     body.innerHTML = '';
     if (mode !== 'story' && window.FKStory) window.FKStory.stop();
     if (mode === 'ball') ballLab();
-    else if (mode === 'exp') experimentLab();
     else if (mode === 'history') exhibition();
     else if (mode === 'story') window.FKStory && window.FKStory.panel(body, title);
     drawer.hidden = mode === 'play';
@@ -181,94 +180,6 @@
     out.append(el('p', { class: 'hint' }, `The crossing heights differ by ${spread.toFixed(2)} m with identical launch conditions — the only difference is where each ball's drag crisis falls.`));
   }
 
-  // ───────────── Experiment Lab ─────────────
-  const EXPERIMENTS = [
-    { id: 'spin', name: '1 · Spin vs curve', vary: 'sideSpin', values: [0, 3, 6, 9, 12], unit: 'rev/s', label: (v) => `side spin ${v} rev/s`,
-      text: 'Same speed and direction; only the side spin changes. The Magnus force is roughly proportional to spin at a given speed, so the curve grows with spin, but not linearly: the lift coefficient saturates.' },
-    { id: 'drag', name: '2 · Speed vs drag', vary: 'speed', values: [18, 23, 28, 33], unit: 'm/s', label: (v) => `${v} m/s (${(v * 3.6).toFixed(0)} km/h)`,
-      text: 'Faster shots arrive sooner, but drag grows with the square of speed, so the fastest shot loses the most speed in absolute terms. Watch the flight time shrink less than the speed rises.' },
-    { id: 'topback', name: '3 · Backspin vs topspin', vary: 'topSpin', values: [-6, -3, 0, 3, 6], unit: 'rev/s', label: (v) => v > 0 ? `topspin ${v}` : v < 0 ? `backspin ${-v}` : 'no spin',
-      text: 'Topspin makes the Magnus force point down, so the ball dips. Backspin points it up, so the ball floats and lands later.' },
-    { id: 'knuckle', name: '4 · The knuckleball', vary: 'seed', values: [1, 2, 3, 4, 5], unit: '', label: (v) => `identical kick, attempt ${v}`, knuckle: true, fixed: { sideSpin: 0, topSpin: 0.15, speed: 31 },
-      text: 'Five identical, almost spinless kicks. Only the tiny differences in how the wake separates change between attempts (modelled as a slowly varying side force), and the paths fan out.' },
-    { id: 'wind', name: '5 · Wind', vary: 'windDir', values: [-1, 0, 90, 180, 270], unit: '°', label: (v) => v < 0 ? 'no wind' : `8 m/s toward ${['the goal', 'the right', 'the kicker', 'the left'][v / 90]}`, env: true,
-      text: 'The ball feels the wind through drag and Magnus, which depend on its speed relative to the air. A tail wind lowers the relative speed, so the ball carries; a head wind does the opposite.' },
-    { id: 'ball', name: '6 · Ball design', ball: true,
-      text: 'Identical kicks with each ball model from the Ball Laboratory (measured drag-crisis values where available).' },
-    { id: 'perfect', name: '7 · The perfect free kick', perfect: true,
-      text: 'A target appears in the goal. Use the Kick controls (speed, direction, elevation, spin) to put the predicted path through it, then press "Check". Stuck? Ask for a solution.' },
-  ];
-  let expSel = 'spin', lastRuns = null;
-  const expHistory = [];
-  let target = null;
-  function experimentLab() {
-    title.textContent = 'Experiment lab';
-    body.append(el('p', { class: 'lead' }, 'Controlled experiments: one variable changes, everything else is your current set-up. All paths are computed by the same physics engine as the game.'));
-    const list = el('div', { class: 'explist' });
-    for (const e of EXPERIMENTS) list.append(el('button', { class: e.id === expSel ? 'on' : '', on: { click: () => { expSel = e.id; open('exp'); } } }, e.name));
-    body.append(list);
-    const e = EXPERIMENTS.find((x) => x.id === expSel);
-    body.append(el('p', {}, e.text));
-    const out = el('div');
-    if (e.perfect) { perfectUI(out); body.append(out); return; }
-    body.append(el('div', { class: 'btnrow' }, el('button', { class: 'primary', on: { click: () => runExp(e, out) } }, 'Run experiment')), out);
-    if (expHistory.length) {
-      body.append(el('h4', {}, 'Earlier runs'), el('ul', { class: 'hist' }, ...expHistory.slice(0, 6).map((h) => el('li', {}, h))));
-    }
-  }
-  function runExp(e, out) {
-    let items;
-    if (e.ball) {
-      items = FKBalls.BALLS.map((b) => { const c = FK.cloneConfig(A.cfg); const a = FKBalls.aeroFor(b.id, 'A', FK.AERO_DEFAULT); if (a) c.aero = a; else delete c.aero; return { label: b.name, cfg: c }; });
-    } else {
-      items = e.values.map((v) => {
-        const c = FK.cloneConfig(A.cfg);
-        if (e.fixed) Object.assign(c.kick, e.fixed);
-        if (e.env) { if (v < 0) c.env.windSpeed = 0; else { c.env.windSpeed = 8; c.env.windDir = v; } }
-        else if (e.vary === 'seed') c.seed = v * 7919;
-        else c.kick[e.vary] = v;
-        return { label: e.label(v), cfg: c, opts: e.knuckle ? { knuckle: true } : null };
-      });
-    }
-    const runs = runFlights(items);
-    lastRuns = runs; showRuns(runs);
-    out.innerHTML = '';
-    out.append(table(runs), chart(runs), el('div', { class: 'btnrow' }, csvButton(runs, 'experiment-' + e.id)));
-    const cross = runs.filter((r) => r.f.crossing);
-    if (cross.length > 1) {
-      const dz = Math.max(...cross.map((r) => r.f.crossing.z)) - Math.min(...cross.map((r) => r.f.crossing.z));
-      const dy = Math.max(...cross.map((r) => r.f.crossing.y)) - Math.min(...cross.map((r) => r.f.crossing.y));
-      const s = `${e.name}: crossings spread ${dy.toFixed(2)} m sideways and ${dz.toFixed(2)} m in height`;
-      out.append(el('p', { class: 'hint' }, s + '.'));
-      expHistory.unshift(s);
-    }
-  }
-  function perfectUI(out) {
-    if (!target) target = { y: (Math.random() * 2 - 1) * 3.1, z: 0.4 + Math.random() * 1.7 };
-    const ring = () => {           // draw the target as a ring on the goal line
-      const pts = new Float32Array(3 * 25);
-      for (let i = 0; i <= 24; i++) { const a = (i / 24) * Math.PI * 2; pts[i * 3] = 0.02; pts[i * 3 + 1] = target.y + Math.cos(a) * 0.3; pts[i * 3 + 2] = target.z + Math.sin(a) * 0.3; }
-      A.extraRibbons.length = 0; A.extraRibbons.push({ pts, n: 25, width: 0.06, color: [1, 0.35, 0.3, 1] });
-    };
-    ring();
-    const res = el('div', { class: 'card' });
-    const check = () => {
-      const f = FK.simulateFlight(A.cfg, { knuckle: false });
-      res.innerHTML = '';
-      if (!f.crossing) { res.append(el('p', {}, 'The predicted path does not reach the goal line yet.')); return; }
-      const miss = Math.hypot(f.crossing.y - target.y, f.crossing.z - target.z);
-      res.append(el('h4', {}, miss < 0.3 ? 'On target!' : `Off by ${(miss * 100).toFixed(0)} cm`),
-        el('p', {}, `Crossing: ${f.crossing.y.toFixed(2)} m across, ${f.crossing.z.toFixed(2)} m high, after ${f.crossing.t.toFixed(2)} s (target ${target.y.toFixed(2)}, ${target.z.toFixed(2)}).`));
-      if (miss < 0.3) res.append(el('p', {}, 'Why it works: elevation sets how long gravity has to pull the ball down, direction and side spin set where it ends up sideways, and topspin or backspin shift the height at the line.'));
-    };
-    out.append(el('p', {}, `Target: ${target.y.toFixed(2)} m ${target.y >= 0 ? 'right' : 'left'} of centre, ${target.z.toFixed(2)} m high (red ring).`),
-      el('div', { class: 'btnrow' },
-        el('button', { class: 'primary', on: { click: check } }, 'Check'),
-        el('button', { on: { click: () => { const a = A.aimAt(target.y, target.z); check(); A.toast(a.converged ? 'Solved: direction and elevation adjusted for your speed and spin' : 'No exact solution with this speed and spin — try more speed'); } } }, 'Show a solution'),
-        el('button', { on: { click: () => { target = null; open('exp'); } } }, 'New target')),
-      res);
-  }
-
   // ───────────── the historical exhibition ─────────────
   let kickSel = null;
   function exhibition() {
@@ -360,12 +271,11 @@
   }
 
   window.FKLabs = { open, load };
-  // #lab=ball|exp|history|story (&kickid=messi-2019) opens a section directly — handy for links and screenshots
+  // #lab=ball|history|story (&kickid=messi-2019) opens a section directly — handy for links and screenshots
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get('kickid')) kickSel = h.get('kickid');
   if (h.get('lab')) setTimeout(() => {
     open(h.get('lab'));
     if (h.has('compare') && h.get('lab') === 'ball') compare();
-    if (h.get('exp')) { expSel = h.get('exp'); open('exp'); const b = [...document.querySelectorAll('#labBody .btnrow button.primary')][0]; if (b) b.click(); }
   }, 300);
 })();

@@ -40,8 +40,18 @@
         return { eye: [s[0] - dx * 3.2 + rx * 3.4 * near, s[1] - dy * 3.2 + ry * 3.4 * near, Math.max(0.8, s[2] + 1.1)],
           target: [s[0], s[1], s[2]], up: [0, 0, 1], fov: 0.7, k: 12 };
       }
-      case 'keeper':                          // what the goalkeeper can see: eye height, on the goal line
-        return { eye: [0.6, c.keeperY || 0, 1.75], target: [s[0], s[1], Math.max(0.6, s[2])], up: [0, 0, 1], fov: 0.8, k: 10 };
+      case 'keeper': {                        // through the goalkeeper's eyes: crouch, shuffle and dive with him
+        const h = c.keeperHead;
+        if (!h) return { eye: [0.6, c.keeperY || 0, 1.75], target: [s[0], s[1], Math.max(0.6, s[2])], up: [0, 0, 1], fov: 0.8, k: 10 };
+        // the eyes sit a little in front of the head's centre (the near plane hides the head itself)
+        const eye = [h.pos[0] + h.F[0] * 0.1 + h.U[0] * 0.03, h.pos[1] + h.F[1] * 0.1 + h.U[1] * 0.03, Math.max(0.12, h.pos[2] + h.F[2] * 0.1 + h.U[2] * 0.03)];
+        // he never takes his eyes off the ball; once it is past him (in the net) he looks back out at the pitch
+        const past = s[0] < eye[0] + 0.4;
+        const target = past ? [eye[0] + 12, eye[1] * 0.5 + s[1] * 0.5, 1.0] : [s[0], s[1], Math.max(0.1, s[2])];
+        // the head's roll carries into the view during a dive, softened so it reads as a tilt, not a spin
+        const up = [h.U[0] * 0.4, h.U[1] * 0.4, 0.6 + h.U[2] * 0.4];
+        return { eye, target, up, fov: 1.05, k: 22 };
+      }
       case 'side':                            // pure elevation view: height, dip and the wall clearance
         return { eye: [mid[0], -40, 2.2], target: [mid[0], mid[1], 2.2], up: [0, 0, 1], fov: 0.5, k: 6 };
       case 'inspect': {                       // paused: orbit the ball itself

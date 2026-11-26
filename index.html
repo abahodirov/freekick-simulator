@@ -21,7 +21,6 @@
     <button data-mode="play" class="on">Play</button>
     <button data-mode="story">Anatomy</button>
     <button data-mode="history">Free kicks</button>
-    <button data-mode="exp">Experiments</button>
     <button data-mode="ball">Ball lab</button>
   </nav>
   <div class="spacer"></div>
@@ -135,6 +134,11 @@
   </details>
 
   <details data-group="more">
+    <summary>Match</summary>
+    <label class="check"><input type="checkbox" id="iCeleb" checked> Goal celebrations (C)</label>
+  </details>
+
+  <details data-group="more">
     <summary>Physics</summary>
     <label class="check"><input type="checkbox" id="iDrag"> Air drag</label>
     <label class="check"><input type="checkbox" id="iMagnus"> Magnus effect (spin curve)</label>
@@ -231,6 +235,7 @@
     <button data-cam="broadcast" title="TV gantry, side-on (2)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M9 21h6M12 18v3"/></svg><span>TV</span></button>
     <button data-cam="follow" title="Chase the ball (3)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="12" r="4"/><path d="M3 9h5M2 12h6M3 15h5"/></svg><span>Ball</span></button>
     <button data-cam="goal" title="Behind the net (4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19V7h18v12"/><path d="M3 11h18M3 15h18M9 7v12M15 7v12" opacity=".45"/></svg><span>Goal</span></button>
+    <button data-cam="keeper" title="Through the goalkeeper's eyes (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></svg><span>Keeper</span></button>
   </div>
   <span class="sep" aria-hidden="true"></span>
   <button id="btnReplay" class="icon" title="Replay (R)" aria-label="Replay" disabled>
@@ -280,8 +285,9 @@
     <tr><td><kbd>A</kbd> <kbd>D</kbd></td><td>Curl left / right</td></tr>
     <tr><td><kbd>Q</kbd> <kbd>E</kbd></td><td>Backspin / topspin</td></tr>
     <tr><td>Drag on the pitch</td><td>Aim (Kicker camera) or orbit (Orbit camera)</td></tr>
-    <tr><td><kbd>1</kbd>–<kbd>4</kbd></td><td>Cameras: behind the ball, TV, chase the ball, behind the goal</td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>5</kbd></td><td>Cameras: behind the ball, TV, chase the ball, behind the goal, the keeper's eyes</td></tr>
     <tr><td><kbd>R</kbd> <kbd>P</kbd> <kbd>M</kbd> <kbd>H</kbd></td><td>Replay, pause, mute, hide panels</td></tr>
+    <tr><td><kbd>C</kbd></td><td>Goal celebrations on / off</td></tr>
   </table>
   <p>Drag the ball on the position map to move the free kick. Click the goal-face chart to have the simulator solve the aim for that spot with your current speed and spin.</p>
   <form method="dialog"><button class="primary">Close</button></form>

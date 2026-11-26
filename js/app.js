@@ -25,7 +25,8 @@
   // ───────────── state ─────────────
   const cfg = FK.defaultConfig();
   cfg.seed = (Math.random() * 1e9) | 0;
-  const ui = { guide: 'full', noise: 'off', vacuum: false, trails: true, cam: 'kicker', speed: 1, paused: false, taker: 'ronaldo', light: 'dusk', style: 'real' };   // the stadium by default
+  const ui = { guide: 'full', noise: 'off', vacuum: false, trails: true, cam: 'kicker', speed: 1, paused: false, taker: 'ronaldo', light: 'dusk', style: 'real', celebrate: true };   // the stadium by default
+  try { if (localStorage.getItem('fk.celebrate') === '0') ui.celebrate = false; } catch (e) { /* storage blocked: keep the default */ }
   let runT = -10;            // kicker's clock relative to the strike (s); the ball is struck at runT = 0
   const noiseRng = FK.mulberry32((Math.random() * 1e9) | 0);
 
@@ -226,8 +227,16 @@
     bindCheck('iMagnus', () => cfg.physics.magnus, (v) => { cfg.physics.magnus = v; }),
     bindCheck('iKnuckle', () => cfg.physics.knuckle, (v) => { cfg.physics.knuckle = v; }),
     bindCheck('iVacuum', () => ui.vacuum, (v) => { ui.vacuum = v; }),
-    bindCheck('iTrails', () => ui.trails, (v) => { ui.trails = v; if (!v) trails.length = 0; })
+    bindCheck('iTrails', () => ui.trails, (v) => { ui.trails = v; if (!v) trails.length = 0; }),
+    bindCheck('iCeleb', () => ui.celebrate, (v) => setCelebrate(v))
   );
+  /** Goal celebrations on/off (remembered). Switching off also ends one that is under way. */
+  function setCelebrate(v) {
+    ui.celebrate = v;
+    try { localStorage.setItem('fk.celebrate', v ? '1' : '0'); } catch (e) { /* storage blocked */ }
+    if (!v) goalAt = null;
+    const el = $('iCeleb'); if (el) el.checked = v;
+  }
   function syncControls() { syncers.forEach((f) => f()); }
 
   /** Things that only change when the setup changes (not every frame). */
@@ -680,9 +689,10 @@
       case 'p': togglePause(); break;
       case 'm': toggleSound(); break;
       case 'h': togglePanels(); break;
+      case 'c': setCelebrate(!ui.celebrate); toast(ui.celebrate ? 'Goal celebrations on' : 'Goal celebrations off'); break;
       case '?': $('help').showModal(); break;
       default: {
-        if (k >= '1' && k <= '4') setCam(['kicker', 'broadcast', 'follow', 'goal'][+k - 1]);
+        if (k >= '1' && k <= '5') setCam(['kicker', 'broadcast', 'follow', 'goal', 'keeper'][+k - 1]);
         else return;
       }
     }
@@ -705,8 +715,10 @@
   }
   function desiredCamera() {
     // while the scorer celebrates, the camera goes to him (orbit and the paused inspect view stay the user's)
-    const name = inspect.on && ui.paused && mode !== 'aim' ? 'inspect' : takerCeleb && ui.cam !== 'orbit' ? 'celebrate' : ui.cam;
+    // (the keeper's own eyes stay his: you watch the scorer run off from the goal line)
+    const name = inspect.on && ui.paused && mode !== 'aim' ? 'inspect' : takerCeleb && ui.cam !== 'orbit' && ui.cam !== 'keeper' ? 'celebrate' : ui.cam;
     return FKCam.desired(name, { ball: cfg.ball, s: sim.s, mode, goal: sim.goal, followDir, orbit, inspect, opts: camOpts, keeperY: sim.keeper ? sim.keeper.y0 : 0,
+      keeperHead: sim.keeper ? keeperHead : null,
       taker: takerPos ? { x: takerPos[0], y: takerPos[1], z: takerPos[2] } : null, celeb: takerCeleb, time: performance.now() / 1000 });
   }
   function updateCamera(dt) {
@@ -839,7 +851,12 @@
     const ink = ui.style === 'ink', sides = API.sides;
     const withKit = (lk, kit) => (kit ? { ...lk, kit: { ...lk.kit, shirt2: kit.shirt, pattern: 0, ...kit } } : lk);
     sim.wall.forEach((p, i) => { const lk = withKit(wallLook(i), sides && sides.defence); out.push({ body: FKPeople.wallBody(p, animClock + i * 1.7), look: ink ? greyLook(lk) : lk }); });
-    if (sim.keeper) out.push({ body: FKPeople.keeperBody(sim.keeper, animClock, sim.s && [sim.s[0], sim.s[1], sim.s[2]]), look: withKit(KEEPER_LOOK, sides && sides.keeper && { ...sides.keeper, number: 1 }) });
+    if (sim.keeper) {
+      const kb = FKPeople.keeperBody(sim.keeper, animClock, sim.s && [sim.s[0], sim.s[1], sim.s[2]]);
+      // where his eyes are, for the keeper's-eye camera
+      keeperHead = { pos: kb.head, F: (kb.H && kb.H.F) || kb.F, U: (kb.H && kb.H.U) || kb.U };
+      out.push({ body: kb, look: withKit(KEEPER_LOOK, sides && sides.keeper && { ...sides.keeper, number: 1 }) });
+    }
     const ch0 = taker();
     const ch = sides && sides.attack ? { ...ch0, kit: { ...ch0.kit, ...sides.attack } } : ch0;
     const L = FK.launchState(mode === 'aim' ? cfg : sim.cfg);
@@ -876,7 +893,7 @@
       elT.style.transform = `translate(${p[0].toFixed(0)}px, ${p[1].toFixed(0)}px) translate(-50%, -100%)`;
     });
   }
-  let takerPos = null, takerCeleb = null;
+  let takerPos = null, takerCeleb = null, keeperHead = null;
 
   // ── the dock reacts to the shot: the kick button fills as the taker runs up; body[data-mode] drives styling ──
   const dock = { kick: $('btnKick'), p: -1, mode: '' };
@@ -920,7 +937,7 @@
       if (acc > sim.dt) acc = 0;
       for (const ev of sim.events) FKSound.play(ev.type === 'goal' ? null : ev.type, ev.speed);
       sim.events.length = 0;
-      if (sim.goal && goalAt === null && !isReplay) goalAt = sim.t;   // the taker celebrates (not in replays)
+      if (sim.goal && goalAt === null && !isReplay && ui.celebrate) goalAt = sim.t;   // the taker celebrates (not in replays)
       if (!announced && (sim.goal || sim.caught || sim.offTarget || (sim.firstTouchT >= 0 && sim.t > sim.firstTouchT + 1.1))) announce();
       if (sim.done) finishShot();
     }
@@ -1019,7 +1036,12 @@
   });
   applyTheme();
   initSliders();
-  if (hash.get('ball')) { cfg.ballId = hash.get('ball'); configChanged(); }
+  if (hash.get('ball')) {
+    cfg.ballId = hash.get('ball');
+    const aero = window.FKBalls && FKBalls.aeroFor(cfg.ballId, 'A', FK.AERO_DEFAULT);
+    if (aero) cfg.aero = aero; else delete cfg.aero;
+    configChanged();
+  }
   if (hash.get('preset')) applyPreset(hash.get('preset'));
   if (hash.has('panels')) togglePanels();
   if (hash.has('freeze')) freezeAt = parseFloat(hash.get('freeze'));

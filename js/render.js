@@ -210,6 +210,8 @@
   #define uMode vMd
   uniform vec3 uColor2, uColor3, uSun, uEye; uniform int uNum, uPattern, uStyle, uBall;
   uniform sampler2D uBallTex; uniform int uBallTexOn;   // a painted ball texture (assets/balls), equirectangular
+  uniform sampler2D uBallNrm; uniform int uBallNrmOn;   // its object-space normal map (grooves, relief), same layout
+  uniform mat3 uBallRot;                                // the ball's orientation (local → world), for its relief
   uniform vec3 uSunCol, uSkyCol, uGndCol, uFog; uniform float uFogK;
   ${glslArr(12, 'PC', PENT)}
   ${glslArr(20, 'HC', HEX)}
@@ -225,6 +227,14 @@
   // GGX-style specular lobe (normalised enough for a look, not an energy-exact BRDF)
   float ggx(vec3 N, vec3 V, vec3 L, float rough){ vec3 H = normalize(V + L); float a = rough * rough;
     float nh = max(dot(N, H), 0.0); float d = nh * nh * (a * a - 1.0) + 1.0; return (a * a) / (3.14159 * d * d) * max(dot(N, L), 0.0); }
+  // the fine pebbled skin of a ball: a small random tilt in the local tangent plane, fading out once a pebble is
+  // smaller than a pixel (so it never shimmers at a distance)
+  vec3 ballGrain(vec3 p, float amt){
+    vec3 q = p * 140.0;
+    vec3 g = vec3(vnoise(q), vnoise(q + 17.3), vnoise(q + 41.7)) - 0.5;
+    g -= p * dot(g, p);
+    return g * amt * (1.0 - smoothstep(0.35, 1.1, length(fwidth(q))));
+  }
   // seven-segment digit; p in [0,1]x[0,2]
   float digit(vec2 p, int d){
     int m = d==0?0x3F:d==1?0x06:d==2?0x5B:d==3?0x4F:d==4?0x66:d==5?0x6D:d==6?0x7D:d==7?0x07:d==8?0x7F:0x6F;
@@ -309,21 +319,54 @@
       if (abs(dx2.x) < abs(dx.x)) dx.x = dx2.x;
       if (abs(dy2.x) < abs(dy.x)) dy.x = dy2.x;
       base = textureGrad(uBallTex, uv, dx, dy).rgb;
+      vec3 tilt = ballGrain(p, 0.05);
+      if (uBallNrmOn == 1) {
+        // the model's own relief: grooves between the panels, raised graphics, the textured skin
+        vec3 nO = textureGrad(uBallNrm, uv, dx, dy).rgb * 2.0 - 1.0;
+        float up = dot(nO, p);
+        tilt += 1.6 * (nO - p * up);
+        base *= 1.0 - 0.45 * smoothstep(0.015, 0.25, 1.0 - up);           // dirt and shadow settle in the grooves
+      }
+      N = normalize(uBallRot * normalize(p + tilt));
       ballSpec = pow(max(dot(N, normalize(V + uSun)), 0.0), 60.0) * 0.4;
       rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * 0.10;
-    } else if (uMode == 1 && uBall == 0) {   // classic football: 12 pentagons + 20 hexagons, sunk seams, puffed panels
+    } else if (uMode == 1 && uBall == 0) {
+      // classic football: 12 pentagons + 20 hexagons of stitched leather. The seams are real grooves (the normal
+      // tilts into them), each panel is puffed up by the air inside, a row of stitch dimples runs along both sides
+      // of every seam, and the skin is pebbled and lightly scuffed.
       vec3 p = normalize(vL);
-      float s1 = -2.0, s2 = -2.0; float pent = 0.0;
+      float s1 = -2.0, s2 = -2.0, pent = 0.0; vec3 c1 = p, c2 = p;
       for (int i = 0; i < 12; i++) { float s = dot(p, PC[i]);
-        if (s > s1) { s2 = s1; s1 = s; pent = 1.0; } else if (s > s2) { s2 = s; } }
-      for (int i = 0; i < 20; i++) { float s = dot(p, HC[i]) * 1.01174;
-        if (s > s1) { s2 = s1; s1 = s; pent = 0.0; } else if (s > s2) { s2 = s; } }
+        if (s > s1) { s2 = s1; c2 = c1; s1 = s; c1 = PC[i]; pent = 1.0; } else if (s > s2) { s2 = s; c2 = PC[i]; } }
+      for (int i = 0; i < 20; i++) { vec3 c = HC[i] * 1.01174; float s = dot(p, c);
+        if (s > s1) { s2 = s1; c2 = c1; s1 = s; c1 = c; pent = 0.0; } else if (s > s2) { s2 = s; c2 = c; } }
       float gap = s1 - s2, fw = fwidth(gap) + 1e-5;
-      float seam = 1.0 - smoothstep(0.004, 0.004 + 2.0 * fw + 0.004, gap);
-      float puff = smoothstep(0.0, 0.06, gap);
-      vec3 panel = mix(vec3(0.95, 0.95, 0.94), vec3(0.045, 0.05, 0.065), pent);
-      base = mix(panel * mix(0.80, 1.0, puff), vec3(0.10, 0.10, 0.11), seam);
-      ballSpec = pow(max(dot(N, normalize(V + uSun)), 0.0), 70.0) * mix(0.55, 0.18, pent) * (1.0 - seam);
+      vec3 g = c1 - c2; g -= p * dot(g, p);                     // which way the gap grows (away from the seam)
+      // height across the seam h(gap) (in ball radii): a groove 1.3 mm deep, the panel puffing up out of it, and a
+      // row of stitch dimples beside it; the normal tilts against the slope, n ∝ p − h'(gap)·∇gap
+      const float W = 0.0075, D = 0.012, PF = 0.006, G0 = 0.0135, SG = 0.0028, DS = 0.0025;
+      float e = exp(-(gap * gap) / (W * W));
+      float dh = D * 2.0 * gap / (W * W) * e;
+      dh *= clamp(W / (1.6 * fw), 0.0, 1.0);                   // too small to see: fade to a plain dark line
+      vec3 axis = normalize(cross(c1, c2));
+      float along = fract(abs(dot(p, axis)) * 52.0);
+      float row = exp(-pow((gap - G0) / SG, 2.0)), dash = smoothstep(0.32, 0.12, abs(along - 0.5));
+      float sw = clamp(SG / (1.6 * fw), 0.0, 1.0);              // stitches only when they are big enough to see
+      float hole = row * dash * sw;
+      dh += DS * dash * sw * 2.0 * (gap - G0) / (SG * SG) * row;
+      // each panel is a smooth dome around its own centre (the air pressure pushes it out between the seams)
+      vec3 dome = -PF * 30.0 * (c1 - p * dot(c1, p));          // (tilts away from the panel's centre)
+      vec3 tilt = -dh * g + dome + ballGrain(p, pent > 0.5 ? 0.035 : 0.06);
+      N = normalize(uBallRot * normalize(p + tilt));
+      float seam = (1.0 - smoothstep(0.0025, 0.0025 + 2.0 * fw + 0.003, gap));
+      vec3 panel = pent > 0.5 ? vec3(0.035, 0.037, 0.045) : vec3(0.93, 0.925, 0.9);
+      // shadow pooling in and beside the groove, scuffs and grime on the white leather
+      panel *= 1.0 - 0.3 * exp(-(gap * gap) / (6.0 * W * W));
+      float sc = vnoise(p * 9.0) * 0.5 + vnoise(p * 60.0) * 0.5;
+      panel = mix(panel, panel * vec3(0.9, 0.89, 0.86), smoothstep(0.6, 0.85, sc) * (1.0 - pent) * 0.45);
+      panel *= 1.0 - 0.35 * hole;                               // the stitch holes
+      base = mix(panel, vec3(0.08, 0.08, 0.09), seam * 0.85);
+      ballSpec = pow(max(dot(N, normalize(V + uSun)), 0.0), 55.0) * mix(0.45, 0.22, pent) * (1.0 - seam * 0.8);
       rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * 0.10;
     } else if (uMode == 1 && uBall == 4) {
       // Trionda (2026): four panels on a tetrahedron, three waves of host colours sweeping in from the seams, gold edges
@@ -1051,17 +1094,18 @@
     }
 
     /** GL texture of a painted ball (window.FKBallModels[id].texture), loaded once; null until ready or if none. */
-    _ballTexture(id) {
+    _ballTexture(id, normal) {
       id = id || 'engine';                       // no ball chosen = the classic engine ball
       const src = typeof self !== 'undefined' && self.FKBallModels && self.FKBallModels[id];
-      // a real model brings its texture baked onto a sphere map; a painted ball is a sphere map already
-      const url = src && (src.sphereTexture || (src.sphere ? src.texture : null));
+      // a real model brings its texture baked onto a sphere map; a painted ball is a sphere map already;
+      // normal = its baked object-space normal map instead (same layout)
+      const url = src && (normal ? src.sphereNormal : (src.sphereTexture || (src.sphere ? src.texture : null)));
       if (!url) return null;
       this._btex = this._btex || {};
-      const e = this._btex[id];
+      const key = normal ? id + '#n' : id, e = this._btex[key];
       if (e) return e.ready ? e.tex : null;
       const gl = this.gl, tex = gl.createTexture(), rec = { tex, ready: false };
-      this._btex[id] = rec;
+      this._btex[key] = rec;
       const img = new Image();
       img.onload = () => {
         gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -1628,10 +1672,12 @@
       const Y = [2 * (qx * qy - qz * qw), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz + qx * qw)];
       const Z = [2 * (qx * qz + qy * qw), 2 * (qy * qz - qx * qw), 1 - 2 * (qx * qx + qy * qy)];
       gl.uniform1i(mu.uBall, { brazuca: 1, jabulani: 2, cafusa: 3, trionda: 4 }[frame.ballDesign] || 0);
-      const btex = this._ballTexture(frame.ballDesign);
+      const btex = this._ballTexture(frame.ballDesign), bnrm = btex && this._ballTexture(frame.ballDesign, true);
       if (btex) { gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, btex); gl.uniform1i(mu.uBallTex, 6); gl.uniform1i(mu.uBallTexOn, 1); gl.activeTexture(gl.TEXTURE0); }
+      if (bnrm) { gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, bnrm); gl.uniform1i(mu.uBallNrm, 7); gl.uniform1i(mu.uBallNrmOn, 1); gl.activeTexture(gl.TEXTURE0); }
+      gl.uniformMatrix3fv(mu.uBallRot, false, [X[0], X[1], X[2], Y[0], Y[1], Y[2], Z[0], Z[1], Z[2]]);
       this._prim(this.ballMesh, [b.x, b.y, b.z], X, Y, Z, R, R, R, COL.white, 1);
-      gl.uniform1i(mu.uBall, 0); gl.uniform1i(mu.uBallTexOn, 0);
+      gl.uniform1i(mu.uBall, 0); gl.uniform1i(mu.uBallTexOn, 0); gl.uniform1i(mu.uBallNrmOn, 0);
 
       // ink pass for the non-instanced shapes: torsos, ball, goal frame
       if (ink) {
