@@ -13,7 +13,7 @@ Curl it, dip it, or knuckle it past the wall and the keeper. Every flight obeys 
 ![Dependencies](https://img.shields.io/badge/dependencies-none-lightgrey)
 ![WebGL2](https://img.shields.io/badge/WebGL2-3D-orange)
 
-<img src="docs/screenshot.png" alt="A curled free kick going in at the top corner, seen from behind the goal while the keeper dives" width="860">
+<img src="docs/screenshot.png" alt="Version 2: lining up a free kick from behind the ball, with a four-player wall and the keeper in a full stadium" width="860">
 
 </div>
 
@@ -168,6 +168,11 @@ values for each technique, not measurements of any particular goal.
 - Hong, S. & Asai, T. (2014). Effect of panel shape of soccer ball on its flight characteristics. *Scientific Reports* 4, 5068.
 - Dupeux, G., Le Goff, A., Quéré, D. & Clanet, C. (2010). The spinning ball spiral. *New Journal of Physics* 12, 093004.
 - Match facts for the exhibition: see the sources listed on each case study (`js/history.js`).
+
+## Contributors
+
+- [@abahodirov](https://github.com/abahodirov)
+- [@TomasPerlovic](https://github.com/TomasPerlovic)
 
 ## Credits
 
