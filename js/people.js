@@ -1,12 +1,12 @@
 /*
- * Free Kick Simulator â€” people: skeletons, poses and the selectable free-kick takers.
+ * Free Kick Simulator — people: skeletons, poses and the selectable free-kick takers.
  *
  * Pure and DOM-free (runs in Node for tests). Every function returns joint positions in world metres;
  * the renderer only draws them. Nothing here feeds back into the ball physics: the keeper's body comes from
  * the physics engine (js/physics.js) and is only dressed here, and the kicker's animation is timed so the
  * boot meets the ball at t = 0 of the simulation.
  *
- * Frame conventions (world): +z up. A body frame is F (facing), U (up), Rt = F Ã— U (the person's right).
+ * Frame conventions (world): +z up. A body frame is F (facing), U (up), Rt = F × U (the person's right).
  */
 (function (root, factory) {
   const api = factory();
@@ -15,7 +15,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ vectors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ───────────── vectors ─────────────
   const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
   const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
@@ -26,16 +26,16 @@
   const lerp = (a, b, t) => a + (b - a) * t;
   const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
   const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
-  /** p + aÂ·A + bÂ·B + cÂ·C */
+  /** p + a·A + b·B + c·C */
   const comb = (p, a, A, b, B, c, C) => [p[0] + a * A[0] + b * B[0] + c * C[0], p[1] + a * A[1] + b * B[1] + c * C[1], p[2] + a * A[2] + b * B[2] + c * C[2]];
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ body dimensions (for a 1.80 m adult; scaled by height / 1.8) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ───────────── body dimensions (for a 1.80 m adult; scaled by height / 1.8) ─────────────
   const DIM = {
     pelvis: 0.97, hipW: 0.095, thigh: 0.45, shin: 0.44, foot: 0.2, ankle: 0.075,
     spine: 0.52, shoulderW: 0.19, upperArm: 0.29, foreArm: 0.27, neck: 0.1, head: 0.13,
   };
 
-  /** Two-bone inverse kinematics: middle joint for a chain rootâ†’target, bending toward `hint`. */
+  /** Two-bone inverse kinematics: middle joint for a chain root→target, bending toward `hint`. */
   function ik2(rootP, target, l1, l2, hint) {
     let d = sub(target, rootP);
     let dl = len(d);
@@ -133,7 +133,7 @@
     }
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ wall players â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ───────────── wall players ─────────────
   const WALL_POSE = {
     lean: 0.06, drop: 0.03,
     L: { hip: 0.12, abd: 0.05, knee: 0.22 }, R: { hip: 0.12, abd: 0.05, knee: 0.22 },
@@ -170,7 +170,7 @@
     return b;
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ goalkeeper (dressed from the physics body) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ───────────── goalkeeper (dressed from the physics body) ─────────────
   /**
    * k: the physics keeper (centre of mass cy,cz; body angle theta; ankles fy,fz; gloves hy,hz) at x = k.x.
    * The body plane is the goal plane; the keeper faces +x (up the pitch).
@@ -299,7 +299,7 @@
     return body;
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ the free-kick takers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ───────────── the free-kick takers ─────────────
   /*
    * Looks are deliberately generic (colours, hair, build) and the kits are plain national-style colours
    * with no crests. The "signature" kicks are approximate technique archetypes: speed and spin values are
@@ -361,6 +361,11 @@
       kit: { shirt: [0.78, 0.08, 0.12], shirt2: [0.78, 0.08, 0.12], pattern: 0, shorts: [0.78, 0.08, 0.12], socks: [0.78, 0.08, 0.12], number: 11 },
       boots: [0.95, 0.35, 0.2], run: { steps: 5, angle: 8, speed: 3.5 },
       kick: { speed: 32, side: 0, top: 0.3, ty: 2.4, tz: 1.9, label: 'Knuckleball', note: 'Straight through the ball from long range: little spin, a wobbling flight' } },
+    { id: 'payet', name: 'Dimitri Payet', short: 'Payet', foot: 'right', height: 1.75, build: 0.93,
+      skin: [0.80, 0.59, 0.45], hair: [0.08, 0.06, 0.05], hairStyle: 'short', beard: true,   // short dark hair, full trimmed beard
+      kit: { shirt: [0.48, 0.10, 0.20], shirt2: [0.48, 0.10, 0.20], sleeves: [0.47, 0.74, 0.92], pattern: 0, trim: [0.47, 0.74, 0.92], shorts: [0.96, 0.96, 0.96], socks: [0.48, 0.10, 0.20], number: 27 },
+      boots: [0.95, 0.95, 0.95], run: { steps: 4, angle: 32, speed: 2.7 },
+      kick: { speed: 26, side: -8, top: 3, ty: -3.0, tz: 2.15, label: 'Whipped curler', note: 'Right foot, inside of the boot: whipped up over the wall and dipping into the far top corner' } },
   ];
   const CHAR_BY_ID = Object.fromEntries(CHARACTERS.map((c) => [c.id, c]));
 
@@ -725,7 +730,7 @@
 
   /**
    * The kicker's body at time t relative to the strike (t < 0 run-up, 0 = contact, > 0 follow-through).
-   * ball: {x,y} free-kick spot; aim: unit horizontal shot direction [x,y]. t < -runTime â†’ standing at the mark.
+   * ball: {x,y} free-kick spot; aim: unit horizontal shot direction [x,y]. t < -runTime → standing at the mark.
    */
   /** The old keyframed kicker (superseded by the locomotion model above; kept for reference). */
   function kickerBodyKeyframed(ch, t, ball, aim) {
@@ -970,7 +975,7 @@
   // ───────────── goal celebrations ─────────────
   /** Each taker's celebration after a goal. */
   const CELEB_OF = { ronaldo: 'siu', messi: 'pointUp', carlos: 'kneeSlide', beckham: 'cantHear', pirlo: 'kalma', juninho: 'pointUp',
-    ronaldinho: 'shaka', koeman: 'kneeSlide', mihajlovic: 'cantHear', nakamura: 'penguin', bale: 'penguin' };
+    ronaldinho: 'shaka', koeman: 'kneeSlide', mihajlovic: 'cantHear', nakamura: 'penguin', bale: 'penguin', payet: 'kneeSlide' };
   const CELEB_NAMES = { siu: 'Siuuu', pointUp: 'Pointing to the sky', kneeSlide: 'Knee slide', cantHear: "Can't hear you",
     kalma: 'Calma', shaka: 'Shaka', penguin: 'Penguin slide' };
 

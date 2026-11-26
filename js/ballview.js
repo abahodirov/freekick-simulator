@@ -9,7 +9,7 @@
  */
 (function (root) {
   'use strict';
-  const PATTERN = { engine: 0, classic: 0, brazuca: 1, jabulani: 2, cafusa: 3, trionda: 4 };
+  const PATTERN = { engine: 0, classic: 0, brazuca: 1, jabulani: 2, trionda: 4 };
 
   const VS = `#version 300 es
   in vec3 aP; in vec3 aN; in vec2 aUV;

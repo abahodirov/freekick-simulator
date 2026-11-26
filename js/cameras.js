@@ -59,8 +59,12 @@
         return { eye: [s[0] + i.dist * cp * Math.cos(i.yaw), s[1] + i.dist * cp * Math.sin(i.yaw), s[2] + i.dist * Math.sin(i.pitch)],
           target: [s[0], s[1], s[2]], up: [0, 0, 1], fov: 0.7, k: 16 };
       }
-      case 'broadcast':
-        return { eye: [mid[0] + 2, -47, 17], target: [b0.x * 0.2 + s[0] * 0.5, b0.y * 0.2 + s[1] * 0.5, 1], up: [0, 0, 1], fov: 0.66, k: 5 };
+      case 'broadcast': {                     // the TV main camera: high in the main stand behind the ball, long lens,
+        // goal top left, wall in the middle, taker bottom right; once the ball is struck it pans gently after it
+        const t0 = [b0.x * 0.64, b0.y * 0.64, 0.6], live = c.mode !== 'aim' ? 0.35 : 0;
+        return { eye: [b0.x + 26, -34, 13], target: [t0[0] + (s[0] - t0[0]) * live, t0[1] + (s[1] - t0[1]) * live, t0[2] + (s[2] - t0[2]) * live * 0.5],
+          up: [0, 0, 1], fov: 0.34, k: 4 };
+      }
       case 'top':
         return { eye: [mid[0] + 0.01, mid[1] * 0.6, 12 + d * 1.25], target: [mid[0], mid[1] * 0.6, 0], up: [-1, 0, 0], fov: 0.8, k: 6 };
       case 'goal':
@@ -69,7 +73,18 @@
         const a = (c.time || 0) * 0.35;
         return { eye: [s[0] + 0.9 * Math.cos(a), s[1] + 0.9 * Math.sin(a), s[2] + 0.3], target: [s[0], s[1], s[2]], up: [0, 0, 1], fov: 0.5, k: 8 };
       }
-      case 'taker': {                         // the free-kick taker: run-up, plant foot and strike, from the front-side
+      case 'taker': {                         // through the taker's eyes: the ball at his feet, the wall and the goal ahead
+        const h = c.takerHead;
+        if (h && c.mode !== 'done') {
+          const eye = [h.pos[0] + h.F[0] * 0.1 + h.U[0] * 0.03, h.pos[1] + h.F[1] * 0.1 + h.U[1] * 0.03, Math.max(0.3, h.pos[2] + 0.03)];
+          // before the strike he looks over the ball at the goal; once it is struck his eyes follow it
+          const struck = c.mode === 'live' && Math.hypot(s[0] - b0.x, s[1] - b0.y) > 0.4;
+          const target = struck ? [s[0], s[1], Math.max(0.3, s[2])] : [b0.x * 0.55, b0.y * 0.55, 0.55];
+          return { eye, target, up: [h.U[0] * 0.25, h.U[1] * 0.25, 0.75 + h.U[2] * 0.25], fov: 1.0, k: 16 };
+        }
+        return desired('takerside', c);
+      }
+      case 'takerside': {                     // the free-kick taker: run-up, plant foot and strike, from the front-side (#cam=takerside)
         const t = c.taker || { x: b0.x, y: b0.y, z: 1 };
         const sx = near > 0 ? 1 : -1;
         const ex = t.x + fx * 3.6 - fy * 2.6 * sx, ey = t.y + fy * 3.6 + fx * 2.6 * sx;

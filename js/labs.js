@@ -108,76 +108,107 @@
   }
   const sourceLink = (s) => el('a', { href: s.url, target: '_blank', rel: 'noopener' }, s.title);
 
-  // ───────────── Ball Laboratory ─────────────
-  let ballSel = 'brazuca', orient = 'A';
+  // ───────────── Ball lab ─────────────
+  // The three balls you can play with, explained in plain words; the wind-tunnel detail sits under "The science".
+  const LAB_BALLS = [
+    { id: 'engine', name: 'Classic', year: '32 panels', colour: '#3987e5',
+      line: 'Stitched seams roughen the air around it early, so it flies the most predictably: what you aim is what you get.' },
+    { id: 'jabulani', name: 'Jabulani', year: '2010', colour: '#e5713a',
+      line: 'Smooth and nearly seamless. It stays "draggy" until very high speed, and hit without spin it wobbles and swerves late: the keeper\'s nightmare.' },
+    { id: 'trionda', name: 'Trionda', year: '2026', colour: '#2fa36b',
+      line: 'Only four panels, with raised and pressed-in surface details. No wind-tunnel data is published yet, so here it flies like the Classic.' },
+  ];
+  let ballSel = 'jabulani';
+  const orient = 'A';
+  const aeroOf = (id) => Object.assign({}, FK.AERO_DEFAULT, FKBalls.aeroFor(id, orient, FK.AERO_DEFAULT) || {});
+  const inPlay = (id) => (A.cfg.ballId || 'engine') === id;
   function ballLab() {
-    title.textContent = 'Ball laboratory';
-    body.append(el('p', { class: 'lead' }, 'Footballs differ mostly in one thing that matters for flight: the speed at which the air around them switches from a "draggy" to a "slippery" flow (the drag crisis). Panels and surface texture move that switch. Compare models with exactly the same kick.'));
-    const list = el('div', { class: 'balllist' });
-    for (const b of FKBalls.BALLS) {
-      list.append(el('button', { class: b.id === ballSel ? 'on' : '', on: { click: () => { ballSel = b.id; open('ball'); } } },
-        el('b', {}, b.name), el('small', {}, b.year ? String(b.year) : 'generic')));
+    title.textContent = 'Ball lab';
+    body.append(el('p', { class: 'lead' }, 'Same kick, different ball, different flight. Pick a ball to see how it behaves, then race all three with your current kick.'));
+    const list = el('div', { class: 'balllist three' });
+    for (const lb of LAB_BALLS) {
+      list.append(el('button', { class: lb.id === ballSel ? 'on' : '', on: { click: () => { ballSel = lb.id; open('ball'); } } },
+        el('b', {}, el('i', { class: 'sw', style: `background:${lb.colour}` }), lb.name), el('small', {}, inPlay(lb.id) ? 'in play' : lb.year)));
     }
     body.append(list);
-    const b = FKBalls.BALLS.find((x) => x.id === ballSel);
-    const o = b.orient[orient] || b.orient.A;
-    const atm = A.sim.atm;
-    const vCrit = FKBalls.speedAtRe(o.reCrit, atm.rho, atm.mu);
-    const tag = b.tag === 'measured' ? el('span', { class: 'tag ok' }, 'Measured') : el('span', { class: 'tag est' }, 'Engine fit');
-    body.append(el('div', { class: 'card' },
-      el('h4', {}, b.name, ' ', tag),
-      el('p', {}, b.note),
-      Object.keys(b.orient).length > 1 ? el('div', { class: 'seg mini' }, ...['A', 'B'].map((k) => el('button', { class: orient === k ? 'on' : '', on: { click: () => { orient = k; open('ball'); } } }, `Panel orientation ${k}`))) : null,
-      el('dl', {},
-        el('dt', {}, 'Drag crisis completes at'), el('dd', {}, `Re ≈ ${(o.reCrit / 1e5).toFixed(1)}×10⁵ → about ${vCrit.toFixed(1)} m/s (${(vCrit * 3.6).toFixed(0)} km/h) in today's air`),
-        el('dt', {}, 'Drag coefficient after the crisis'), el('dd', {}, `C_d ≈ ${o.cdSuper.toFixed(2)}`),
-        el('dt', {}, 'Below the crisis'), el('dd', {}, 'C_d ≈ 0.35 (engine fit; not given per ball in the source)')),
-      el('p', { class: 'src' }, 'Source: ', sourceLink(b.source))));
+    const lb = LAB_BALLS.find((x) => x.id === ballSel), ap = aeroOf(lb.id), atm = A.sim.atm;
+    // three plain meters, each scaled against the most extreme of the three balls
+    const vSlip = FKBalls.speedAtRe(ap.reCrit, atm.rho, atm.mu) * 3.6;
+    const Re30 = atm.rho * 30 * 0.22 / atm.mu, cd30 = FK.dragCoefficient(Re30, 0, ap);
+    const meter = (label, frac, value, hint) => el('div', { class: 'meter' },
+      el('div', { class: 'meter-top' }, el('span', {}, label), el('b', {}, value)),
+      el('div', { class: 'meter-bar' }, el('i', { style: `width:${Math.round(Math.max(0.06, Math.min(1, frac)) * 100)}%;background:${lb.colour}` })),
+      el('small', {}, hint));
+    body.append(el('div', { class: 'card ballcard' },
+      el('h3', {}, lb.name),
+      el('p', {}, lb.line),
+      meter('Wobble on a no-spin kick', ap.knCl / 0.27, ap.knCl > 0.2 ? 'Wild' : 'Normal', 'How far a knuckleball dances about on its way to goal.'),
+      meter('Air resistance at shot speed', cd30 / 0.3, cd30 > 0.2 ? 'High' : 'Low', 'At 108 km/h: higher means the ball slows and drops sooner.'),
+      meter('Turns "slippery" above', vSlip / 140, `${vSlip.toFixed(0)} km/h`, 'Above this speed the air grips the ball less (the drag crisis).')));
     body.append(el('div', { class: 'btnrow' },
-      el('button', { class: 'primary', on: { click: () => { useBall(ballSel); A.toast(`Now kicking the ${b.name}`); } } }, 'Use this ball'),
-      el('button', { on: { click: () => { useBall(ballSel); A.setupAim(); A.setCam('ballcam'); } } }, 'Look at it'),
-      el('button', { on: { click: () => compare() } }, 'Compare all balls')));
-    // Cd vs speed curves
+      el('button', { class: 'primary', on: { click: () => { useBall(lb.id); A.toast(`Now playing with the ${lb.name}`); open('ball'); } } }, inPlay(lb.id) ? 'In play ✓' : 'Play with this ball'),
+      el('button', { on: { click: () => race() } }, 'Race all three'),
+      window.FKShowcase ? el('button', { on: { click: () => { FKShowcase.open(); FKShowcase.select(lb.id); } } }, 'See it up close') : null));
+    const out = el('div', { id: 'ballCompare' }); body.append(out);
+
+    // the technical detail, for anyone who wants it
+    const sci = el('details', { class: 'science' }, el('summary', {}, 'The science (wind-tunnel data)'));
+    sci.append(el('p', {}, 'A ball\'s drag drops sharply above a certain speed, when the air hugging its surface turns turbulent and lets go of the ball later (the "drag crisis"). Panels and surface texture move that speed. The Jabulani\'s comes right in the middle of a free kick\'s speed range, so it slows unevenly.'));
     const c = el('canvas', { width: 300, height: 150 });
-    body.append(el('div', { class: 'chart-title' }, 'Drag coefficient vs air speed (non-spinning)'), c);
+    sci.append(el('div', { class: 'chart-title' }, 'Drag coefficient against air speed (no spin)'), c);
     const g = c.getContext('2d'), W = c.width, H = c.height;
     const X = (v) => 28 + (v / 40) * (W - 36), Y = (cd) => H - 18 - (cd / 0.4) * (H - 28);
     g.fillStyle = cv('--muted'); g.font = '10px system-ui';
     for (const v of [0, 10, 20, 30, 40]) g.fillText(`${v}`, X(v) - 4, H - 4);
     for (const cd of [0.1, 0.2, 0.3]) { g.fillText(cd.toFixed(1), 2, Y(cd) + 3); g.strokeStyle = cv('--grid'); g.beginPath(); g.moveTo(28, Y(cd)); g.lineTo(W - 6, Y(cd)); g.stroke(); }
-    FKBalls.BALLS.forEach((bb, i) => {
-      const aero = FKBalls.aeroFor(bb.id, orient, FK.AERO_DEFAULT) || FK.AERO_DEFAULT;
-      g.strokeStyle = RUN_COLORS[i]; g.lineWidth = bb.id === ballSel ? 2.5 : 1.2; g.beginPath();
+    for (const bb of LAB_BALLS) {
+      const aero = aeroOf(bb.id);
+      g.strokeStyle = bb.colour; g.lineWidth = bb.id === ballSel ? 2.5 : 1.2; g.beginPath();
       for (let v = 1; v <= 40; v += 0.5) { const Re = atm.rho * v * 0.22 / atm.mu; const cd = FK.dragCoefficient(Re, 0, aero); v === 1 ? g.moveTo(X(v), Y(cd)) : g.lineTo(X(v), Y(cd)); }
       g.stroke();
-    });
-    const vk = A.cfg.kick.speed;
-    g.strokeStyle = cv('--text'); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(vk), 6); g.lineTo(X(vk), H - 18); g.stroke(); g.setLineDash([]);
-    g.fillStyle = cv('--text'); g.fillText('your kick', X(vk) + 3, 14);
-    body.append(el('div', { class: 'legend' }, ...FKBalls.BALLS.map((bb, i) => el('span', {}, el('i', { class: 'sw', style: `background:${RUN_COLORS[i]}` }), bb.name.replace('Adidas ', '')))));
-    body.append(el('p', { class: 'hint' }, 'Why it matters: a free kick slows from about 30 m/s to about 20 m/s on its way to goal. If the drag crisis sits inside that range, the drag can rise sharply in mid-flight, so the ball "dies" or dips later than the player expects.'));
-    const out = el('div', { id: 'ballCompare' }); body.append(out);
+    }
+    g.fillStyle = cv('--text'); g.fillText('m/s', W - 24, H - 4);
+    sci.append(el('div', { class: 'legend' }, ...LAB_BALLS.map((bb) => el('span', {}, el('i', { class: 'sw', style: `background:${bb.colour}` }), bb.name))));
+    const jb = FKBalls.BALLS.find((x) => x.id === 'jabulani'), en = FKBalls.BALLS.find((x) => x.id === 'engine');
+    sci.append(el('p', { class: 'src' }, 'Jabulani: measured, ', sourceLink(jb.source), '. Classic and Trionda: the engine\'s fit after ', sourceLink(en.source), '. The extra Jabulani wobble is a model value, not a measurement.'));
+    body.append(sci);
   }
-  /** Put a ball model into play: its measured aerodynamics and its look. */
+  /** Put a ball into play: its aerodynamics and its look. */
   function useBall(id) {
     const aero = FKBalls.aeroFor(id, orient, FK.AERO_DEFAULT);
     if (aero) A.cfg.aero = aero; else delete A.cfg.aero;
     if (id === 'engine') delete A.cfg.ballId; else A.cfg.ballId = id;
     A.configChanged();
   }
-  function compare() {
-    const items = FKBalls.BALLS.map((b) => {
+  /** The same kick (same seed, so the same air for every ball) with each of the three balls, drawn on the pitch. */
+  function race() {
+    const knuckle = Math.hypot(A.cfg.kick.sideSpin, A.cfg.kick.topSpin) < 1;
+    const items = LAB_BALLS.map((lb) => {
       const c = FK.cloneConfig(A.cfg);
-      const aero = FKBalls.aeroFor(b.id, orient, FK.AERO_DEFAULT);
+      const aero = FKBalls.aeroFor(lb.id, orient, FK.AERO_DEFAULT);
       if (aero) c.aero = aero; else delete c.aero;
-      return { label: b.name.replace('Adidas ', '') + (b.id !== 'engine' ? ` (${orient})` : ''), cfg: c };
+      return { label: lb.name, cfg: c, opts: knuckle ? { knuckle: true } : null };
     });
     const runs = runFlights(items);
+    runs.forEach((r, i) => { r.color = LAB_BALLS[i].colour; });
     showRuns(runs);
     const out = $('ballCompare'); out.innerHTML = '';
-    out.append(el('h4', {}, 'Same kick, four balls'), table(runs), chart(runs), el('div', { class: 'btnrow' }, csvButton(runs, 'ball-comparison')));
-    const spread = Math.max(...runs.map((r) => r.f.crossing ? r.f.crossing.z : 0)) - Math.min(...runs.map((r) => r.f.crossing ? r.f.crossing.z : 9));
-    out.append(el('p', { class: 'hint' }, `The crossing heights differ by ${spread.toFixed(2)} m with identical launch conditions — the only difference is where each ball's drag crisis falls.`));
+    out.append(el('h4', {}, 'The race: your kick with each ball'));
+    const rows = el('div', { class: 'race' });
+    for (const r of runs) {
+      const x = r.f.crossing;
+      rows.append(el('div', {}, el('i', { class: 'sw', style: `background:${r.color}` }), el('b', {}, r.label),
+        el('span', {}, x ? `${x.t.toFixed(2)} s to the line · ${x.z.toFixed(2)} m high · ${Math.abs(x.y).toFixed(2)} m ${x.y >= 0 ? 'right' : 'left'} of centre` : 'does not reach the goal')));
+    }
+    out.append(rows);
+    const xs = runs.map((r) => r.f.crossing).filter(Boolean);
+    if (xs.length > 1) {
+      const dz = Math.max(...xs.map((x) => x.z)) - Math.min(...xs.map((x) => x.z));
+      const dy = Math.max(...xs.map((x) => x.y)) - Math.min(...xs.map((x) => x.y));
+      out.append(el('p', { class: 'hint' }, `Same boot, same strike: the balls arrive up to ${(dz * 100).toFixed(0)} cm apart in height and ${(dy * 100).toFixed(0)} cm apart sideways.` +
+        (knuckle ? ' Your kick has almost no spin, so the Jabulani\'s wobble shows.' : ' Try the Knuckleball preset to see the Jabulani wobble.')));
+    }
+    out.append(el('p', { class: 'hint' }, 'The three paths are drawn on the pitch in the balls\' colours.'));
   }
 
   // ───────────── the historical exhibition ─────────────
@@ -276,6 +307,6 @@
   if (h.get('kickid')) kickSel = h.get('kickid');
   if (h.get('lab')) setTimeout(() => {
     open(h.get('lab'));
-    if (h.has('compare') && h.get('lab') === 'ball') compare();
+    if (h.has('compare') && h.get('lab') === 'ball') race();
   }, 300);
 })();

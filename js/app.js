@@ -177,6 +177,7 @@
       const r = sim.rec, n = r.x.length, a = new Float32Array(n * 3);
       for (let i = 0; i < n; i++) { a[i * 3] = r.x[i]; a[i * 3 + 1] = r.y[i]; a[i * 3 + 2] = r.z[i]; }
       trails.unshift(a); if (trails.length > 5) trails.pop();
+      syncClear();
     }
     drawMap();
   }
@@ -227,7 +228,7 @@
     bindCheck('iMagnus', () => cfg.physics.magnus, (v) => { cfg.physics.magnus = v; }),
     bindCheck('iKnuckle', () => cfg.physics.knuckle, (v) => { cfg.physics.knuckle = v; }),
     bindCheck('iVacuum', () => ui.vacuum, (v) => { ui.vacuum = v; }),
-    bindCheck('iTrails', () => ui.trails, (v) => { ui.trails = v; if (!v) trails.length = 0; }),
+    bindCheck('iTrails', () => ui.trails, (v) => { ui.trails = v; if (!v) clearTrails(true); }),
     bindCheck('iCeleb', () => ui.celebrate, (v) => setCelebrate(v))
   );
   /** Goal celebrations on/off (remembered). Switching off also ends one that is under way. */
@@ -654,8 +655,37 @@
   }
   function togglePanels() {
     const hid = document.body.classList.toggle('hide-panels'), b = $('btnPanels');
-    b.classList.toggle('on', !hid); b.setAttribute('aria-pressed', String(!hid)); b.title = hid ? 'Show the interface (H)' : 'Hide the interface (H)';
+    b.classList.toggle('on', !hid); b.setAttribute('aria-pressed', String(!hid)); b.title = hid ? 'Show the side panels (H)' : 'Hide the side panels (H)';
+    b.querySelector('.lbl').textContent = hid ? 'Show panels' : 'Hide panels';
+    dismissPanelsTip();
   }
+  // first visit: point at the panels button once, so people know where hiding and showing lives
+  function dismissPanelsTip() {
+    const t = $('panelsTip'); if (t.hidden) return;
+    t.classList.remove('shown'); setTimeout(() => { t.hidden = true; }, 300);
+    try { localStorage.setItem('fk.tipPanels', '1'); } catch (e) { /* storage blocked */ }
+  }
+  $('panelsTip').querySelector('button').addEventListener('click', dismissPanelsTip);
+  setTimeout(() => {
+    let seen = false; try { seen = localStorage.getItem('fk.tipPanels') === '1'; } catch (e) { /* storage blocked */ }
+    if (seen || location.hash.includes('panels')) return;
+    const t = $('panelsTip'); t.hidden = false; requestAnimationFrame(() => t.classList.add('shown'));
+    setTimeout(dismissPanelsTip, 9000);
+  }, 1500);
+  /** The lines of earlier kicks (and any lab paths) disappear; the kick on screen stays. */
+  function clearTrails(silent) {
+    const n = trails.length - (mode === 'aim' ? 0 : 1);
+    if (mode === 'aim') trails.length = 0; else trails.length = Math.min(trails.length, 1);
+    API.extraRibbons.length = 0;
+    syncClear();
+    if (!silent) toast(n > 0 ? `Cleared ${n} earlier kick${n > 1 ? 's' : ''}` : 'Nothing to clear');
+  }
+  function syncClear() {
+    const b = $('btnClear'), extra = window.FKApp ? window.FKApp.extraRibbons.length : 0;
+    const off = trails.length - (mode === 'aim' ? 0 : 1) <= 0 && !extra;
+    if (b && b.disabled !== off) b.disabled = off;
+  }
+  $('btnClear').addEventListener('click', (e) => { clearTrails(); e.currentTarget.blur(); });
   $('btnKick').addEventListener('click', (e) => { kick(); e.currentTarget.blur(); });
   $('btnReplay').addEventListener('click', (e) => { replay(); e.currentTarget.blur(); });
   $('btnPause').addEventListener('click', (e) => { togglePause(); e.currentTarget.blur(); });
@@ -690,9 +720,10 @@
       case 'm': toggleSound(); break;
       case 'h': togglePanels(); break;
       case 'c': setCelebrate(!ui.celebrate); toast(ui.celebrate ? 'Goal celebrations on' : 'Goal celebrations off'); break;
+      case 'x': clearTrails(); break;
       case '?': $('help').showModal(); break;
       default: {
-        if (k >= '1' && k <= '5') setCam(['kicker', 'broadcast', 'follow', 'goal', 'keeper'][+k - 1]);
+        if (k >= '1' && k <= '6') setCam(['kicker', 'broadcast', 'follow', 'goal', 'keeper', 'taker'][+k - 1]);
         else return;
       }
     }
@@ -718,7 +749,7 @@
     // (the keeper's own eyes stay his: you watch the scorer run off from the goal line)
     const name = inspect.on && ui.paused && mode !== 'aim' ? 'inspect' : takerCeleb && ui.cam !== 'orbit' && ui.cam !== 'keeper' ? 'celebrate' : ui.cam;
     return FKCam.desired(name, { ball: cfg.ball, s: sim.s, mode, goal: sim.goal, followDir, orbit, inspect, opts: camOpts, keeperY: sim.keeper ? sim.keeper.y0 : 0,
-      keeperHead: sim.keeper ? keeperHead : null,
+      keeperHead: sim.keeper ? keeperHead : null, takerHead,
       taker: takerPos ? { x: takerPos[0], y: takerPos[1], z: takerPos[2] } : null, celeb: takerCeleb, time: performance.now() / 1000 });
   }
   function updateCamera(dt) {
@@ -865,6 +896,7 @@
     const t = mode === 'aim' ? -99 : mode === 'runup' ? runT : mode === 'done' ? sim.t + (animClock - doneClock) : sim.t;
     const kb = FKPeople.kickerBody(ch, t, sim.cfg.ball, [L.fx, L.fy], animClock, goalAt !== null ? { tGoal: goalAt } : null);
     takerPos = kb.pelvis;
+    takerHead = { pos: kb.head, F: (kb.H && kb.H.F) || kb.F, U: (kb.H && kb.H.U) || kb.U };
     takerCeleb = kb.celebDir ? { dx: kb.celebDir[0], dy: kb.celebDir[1] } : null;
     if (kb.celeb && !celebShown) { celebShown = true; toast(`${ch.short}: ${FKPeople.CELEB_NAMES[kb.celeb]}`); }
     out.push({ body: kb, look: ch });
@@ -893,7 +925,7 @@
       elT.style.transform = `translate(${p[0].toFixed(0)}px, ${p[1].toFixed(0)}px) translate(-50%, -100%)`;
     });
   }
-  let takerPos = null, takerCeleb = null, keeperHead = null;
+  let takerPos = null, takerCeleb = null, keeperHead = null, takerHead = null;
 
   // ── the dock reacts to the shot: the kick button fills as the taker runs up; body[data-mode] drives styling ──
   const dock = { kick: $('btnKick'), p: -1, mode: '' };
@@ -942,6 +974,7 @@
       if (sim.done) finishShot();
     }
     for (const h of frameHooks) h(dt);
+    syncClear();
     updateCamera(dt);
     if (renderer) {
       renderer.draw({

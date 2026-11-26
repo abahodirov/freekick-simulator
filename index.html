@@ -145,7 +145,7 @@
     <label class="check"><input type="checkbox" id="iKnuckle"> Knuckle effect (low-spin wobble)</label>
     <label class="check"><input type="checkbox" id="iForces"> Show force vectors (white gravity, red drag, blue Magnus, orange knuckle)</label>
     <label class="check"><input type="checkbox" id="iVacuum"> Show the no-air path for comparison</label>
-    <label class="check"><input type="checkbox" id="iTrails" checked> Keep trails of earlier kicks</label>
+    <label class="check"><input type="checkbox" id="iTrails" checked> Keep the lines of earlier kicks</label>
   </details>
 </aside>
 
@@ -227,17 +227,22 @@
 <div id="badge" hidden></div>
 
 <footer id="bottom">
-  <button id="btnPanels" class="icon on" title="Hide the interface (H)" aria-label="Hide or show the interface" aria-pressed="true">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path class="l" d="M8 5v14"/><path class="r" d="M16 5v14"/></svg>
+  <button id="btnPanels" class="labeled on" title="Hide the side panels (H)" aria-label="Hide or show the side panels" aria-pressed="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path class="l" d="M8 5v14"/><path class="r" d="M16 5v14"/></svg><span class="lbl">Hide panels</span>
   </button>
+  <div id="panelsTip" class="coach" hidden role="status">Hide or show the side panels here, or press <kbd>H</kbd><button aria-label="Got it">Got it</button></div>
   <div class="seg slider" id="cams" role="group" aria-label="Camera">
     <button data-cam="kicker" class="on" title="Behind the ball (1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="17" r="3"/><path d="M12 12V4M8.5 7.5 12 4l3.5 3.5"/></svg><span>Behind</span></button>
-    <button data-cam="broadcast" title="TV gantry, side-on (2)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M9 21h6M12 18v3"/></svg><span>TV</span></button>
+    <button data-cam="broadcast" title="TV broadcast camera (2)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M9 21h6M12 18v3"/></svg><span>TV</span></button>
     <button data-cam="follow" title="Chase the ball (3)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="12" r="4"/><path d="M3 9h5M2 12h6M3 15h5"/></svg><span>Ball</span></button>
     <button data-cam="goal" title="Behind the net (4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19V7h18v12"/><path d="M3 11h18M3 15h18M9 7v12M15 7v12" opacity=".45"/></svg><span>Goal</span></button>
+    <button data-cam="taker" title="Watch the taker: run-up and strike (6)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="5.5" r="2.2"/><path d="M9 8.5 7.5 14l3 2.5L9 21M7.5 14 4 12M9.5 10l4 2"/><circle cx="18" cy="18" r="2.4"/></svg><span>Taker</span></button>
     <button data-cam="keeper" title="Through the goalkeeper's eyes (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></svg><span>Keeper</span></button>
   </div>
   <span class="sep" aria-hidden="true"></span>
+  <button id="btnClear" class="labeled" title="Clear the lines of earlier kicks (X)" aria-label="Clear earlier kicks" disabled>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3-8 8-11 16-12" stroke-dasharray="3 3"/><path d="M14 14l6 6M20 14l-6 6"/></svg><span class="lbl">Clear</span>
+  </button>
   <button id="btnReplay" class="icon" title="Replay (R)" aria-label="Replay" disabled>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4.5h4.5"/></svg>
   </button>
@@ -285,9 +290,10 @@
     <tr><td><kbd>A</kbd> <kbd>D</kbd></td><td>Curl left / right</td></tr>
     <tr><td><kbd>Q</kbd> <kbd>E</kbd></td><td>Backspin / topspin</td></tr>
     <tr><td>Drag on the pitch</td><td>Aim (Kicker camera) or orbit (Orbit camera)</td></tr>
-    <tr><td><kbd>1</kbd>–<kbd>5</kbd></td><td>Cameras: behind the ball, TV, chase the ball, behind the goal, the keeper's eyes</td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>6</kbd></td><td>Cameras: behind the ball, TV, chase the ball, behind the goal, the keeper's eyes, the taker</td></tr>
     <tr><td><kbd>R</kbd> <kbd>P</kbd> <kbd>M</kbd> <kbd>H</kbd></td><td>Replay, pause, mute, hide panels</td></tr>
     <tr><td><kbd>C</kbd></td><td>Goal celebrations on / off</td></tr>
+    <tr><td><kbd>X</kbd></td><td>Clear the lines of earlier kicks</td></tr>
   </table>
   <p>Drag the ball on the position map to move the free kick. Click the goal-face chart to have the simulator solve the aim for that spot with your current speed and spin.</p>
   <form method="dialog"><button class="primary">Close</button></form>

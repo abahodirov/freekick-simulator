@@ -565,3 +565,23 @@ way) and `ball_bake.py` draws seams from the seam UV set and no longer stores th
   (Re ≈ 3.3×10⁵, about 23 m/s, at the end of a free kick). Over 40 seeded 31 m/s knuckleballs from 25 m the rms
   sideways spread at the goal is 0.35 m (max 0.55 m) against 0.18 m (0.25 m) for the other balls. These are model
   values, not measurements. `#ball=` now also applies the ball's aerodynamics.
+
+## 32. Stage 35: Payet, a broadcast TV camera, the taker's eyes, a plain Ball lab
+
+- **Free kicks:** Payet v Crystal Palace (Premier League, 2 April 2016, Upton Park, 41', about 25 yards, keeper Wayne
+  Hennessey; sources: West Ham match report and "All Angles", Sky Sports report) added; Ronaldo 2018, Koeman 1992,
+  Mihajlović 1998 and Nakamura 2006 removed (nine exhibits). Payet is a new taker (right foot, whipped curler) with
+  his own MakeHuman body and face from `tools/build_players.py`, built last so every other player is byte-identical.
+  Kits can now give sleeves their own colour (`kit.sleeves`; West Ham's sky-blue arms).
+- **TV camera:** high in the main stand behind the ball (ball.x + 26 m, y = −34 m, 13 m up), long lens (fov 0.34),
+  framed on a point 64 % of the way from goal to ball: goal top left, wall in the middle, taker bottom right, like a
+  broadcast free kick. It pans gently after the ball once it is struck.
+- **Taker camera** (key 6): through the taker's eyes, from his head every frame; over the ball toward the goal before
+  the strike, then following the ball. The old front-side view is `#cam=takerside`.
+- **Dock:** "Hide panels" has a label, lights up (accent, pulse) while the panels are hidden, and a one-time tip points
+  to it. A "Clear" button (or X) wipes the lines of earlier kicks and lab paths; it is greyed out when there is nothing.
+- **Ball lab:** the three playable balls, a plain sentence and three meters each (no-spin wobble, air resistance at
+  108 km/h, the speed above which it turns slippery), "Play with this ball", "Race all three" (same kick and seed for
+  each ball, drawn on the pitch) and "See it up close"; the drag chart and sources under "The science". Cafusa removed.
+- **Text encoding:** `js/balls.js`, `js/people.js`, `tools/build_players.py` and `tools/mocap_build.js` had UTF-8 text
+  decoded as Windows-1252 and saved again (comments and one source title showed "CarrÃ©", "â€“"); repaired run by run.

@@ -8,7 +8,7 @@ Curl it, dip it, or knuckle it past the wall and the keeper. Every flight obeys 
 [![Play online](https://img.shields.io/badge/▶_Play-online-2ea44f?style=for-the-badge)](https://abahodirov.github.io/freekick-simulator/)
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Physics tests](https://img.shields.io/badge/tests-104_passing-brightgreen)
+![Physics tests](https://img.shields.io/badge/tests-105_passing-brightgreen)
 ![Version](https://img.shields.io/badge/version-2.0.1-blueviolet)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-lightgrey)
 ![WebGL2](https://img.shields.io/badge/WebGL2-3D-orange)
@@ -24,7 +24,20 @@ No install, no build step, no dependencies.
 **Run it locally:** double-click `index.html` (any current Chrome, Edge, Firefox or Safari).
 
 **Check the physics:** `node tests/physics.test.js` — 29 tests against conservation laws and closed-form results.
-All nine suites (104 tests): `for t in tests/*.test.js; do node "$t"; done`
+All nine suites (105 tests): `for t in tests/*.test.js; do node "$t"; done`
+
+## What's new in v2.0.2
+
+- **Payet against Crystal Palace (2016)** joins the free-kick exhibition, with Dimitri Payet as a new taker in West
+  Ham's claret and sky blue. The exhibition is trimmed to nine of the best-known free kicks.
+- **TV camera** reframed like a real broadcast: high in the main stand, behind the ball, the goal top left and the
+  taker bottom right.
+- **Taker camera** (key `6`): the free kick through the taker's eyes, from the run-up to the ball hitting the net.
+- **Clear button** in the bottom bar (or `X`) wipes the lines of earlier kicks.
+- **Easier to find "Hide panels"**: the button now says what it does, lights up while the panels are hidden, and
+  a one-time tip points to it.
+- **A simpler Ball lab**: the three balls you can play with, three plain meters each, and one "Race all three"
+  button. The wind-tunnel chart sits under "The science". The Cafusa is gone.
 
 ## What's new in v2.0.1
 
@@ -71,10 +84,11 @@ simulator falls back to its built-in sculpted players.
 | Arrow keys | Aim direction and elevation (`Shift` = fine steps) |
 | `W` `S` · `A` `D` · `Q` `E` | Ball speed · curl left/right · backspin/topspin |
 | Drag on the pitch | Aim (or orbit, in the Orbit camera) |
-| `1`–`5` | Cameras: behind the ball, TV, chase the ball, behind the goal, the keeper's eyes |
+| `1`–`6` | Cameras: behind the ball, TV, chase the ball, behind the goal, the keeper's eyes, the taker's eyes |
 | `P` then drag | Pause mid-flight and orbit the ball |
 | `R` `P` `M` `H` | Replay in slow motion, pause, mute, hide panels |
 | `C` | Goal celebrations on / off |
+| `X` | Clear the lines of earlier kicks |
 
 Drag the ball on the position map to move the free kick. Click the goal-face chart and the simulator solves the aim
 for that spot with your current speed and spin.
@@ -86,19 +100,18 @@ for that spot with your current speed and spin.
   impact in slow motion with a freeze-frame, the flight with live force arrows, the goalkeeper, the conclusion).
   It has captions, optional voice narration, scene jumps and a timeline scrubber. Every number comes from the
   running simulation.
-- **Free kicks** — an exhibition of 12 historic free kicks: Koeman 1992, Roberto Carlos 1997, Mihajlović 1998,
-  Beckham 2001, Ronaldinho 2002, Nakamura 2006, Ronaldo 2008 and 2018, Juninho 2009, Pirlo 2013, Bale 2016 and
-  Messi 2019. Each case study gives the documented match facts with sources: date, venue, score, minute, distance,
+- **Free kicks** — an exhibition of 9 historic free kicks: Roberto Carlos 1997, Beckham 2001, Ronaldinho 2002,
+  Ronaldo 2008, Juninho 2009, Pirlo 2013, Bale 2016, Payet 2016 and Messi 2019. Each case study gives the documented match facts with sources: date, venue, score, minute, distance,
   **the goalkeeper**, **the wall** (where a source records it) and **how the goal went in**. The 3-D recreation
   uses match-style kit colours and name tags over the taker, keeper and wall, and launch values labelled as
   estimates. When you watch a recreation, the goal goes in, as it did.
 - **Strike from the boot** (Kick panel) — an impact model turns boot speed and the contact point into launch speed and
   spin (impulse with restitution; an off-centre hit trades speed for spin).
-- **Ball lab** — each ball has its own design on screen (classic panels, six-panel pinwheel, eight-panel with
-  triangles, six-panel dark) and a close orbiting camera. The aerodynamics are the engine default ball plus the
-  Brazuca, Jabulani and Cafusa, using the drag-crisis values measured
-  in a wind tunnel by Hong & Asai (2014, *Scientific Reports* 4:5068) for two panel orientations. It shows C<sub>d</sub>
-  against speed and runs a same-kick comparison.
+- **Ball lab** — the three balls you can play with (Classic, Jabulani, Trionda), each explained in plain words with
+  three meters: how much a no-spin kick wobbles, its air resistance at shot speed, and the speed above which it turns
+  "slippery". "Race all three" flies your current kick with each ball and draws the three paths on the pitch. "The
+  science" holds the drag chart, with the Jabulani's drag crisis as measured in a wind tunnel by Hong & Asai (2014,
+  *Scientific Reports* 4:5068).
 
 - **Match ball** — click the spinning ball at the top left. The ball grows into a large 3-D view you can drag to
   turn, with tabs for other World Cup balls, a few facts about each, and a button to play with it.

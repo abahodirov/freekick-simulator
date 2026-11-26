@@ -518,7 +518,7 @@
   #define uColor vCol
   #define uMode vMd`, `in vec2 vUV; in float vT; flat in float vCls;
   uniform sampler2D uTex, uBrowTex; uniform int uPart, uLongSleeves, uGloves, uOutlineOn, uBrowOn, uCards, uToon; float gA = 1.0; uniform vec3 uBrowCol, uBand; uniform float uScalp, uStubble, uBrowW;
-  uniform vec3 uShirt, uShirt2, uShorts, uSocks, uBoots, uGlove, uTint, uFront, uTrim;
+  uniform vec3 uShirt, uShirt2, uShorts, uSocks, uBoots, uGlove, uTint, uFront, uTrim, uSleeves;
   uniform float uSleeveT, uShortsT, uSockT, uCentreZ, uBeltZ, uKneeZ; uniform vec3 uNeck; uniform int uCollar;
   vec3 gCol; int gMd;
   #define uColor gCol
@@ -583,8 +583,8 @@
       }
     }
     else if (cls < 2.5) { gCol = uShorts; gMd = 7; }                         // seat and hips (belt line handled below)
-    else if (cls < 3.5) { if (t < uSleeveT || uLongSleeves == 1) { gCol = (uCollar == 1 && uLongSleeves == 0 && t > uSleeveT - 0.07) ? uTrim : shirt; gMd = 7; } }   // upper arm: sleeve, cuffed
-    else if (cls < 4.5) { if (uLongSleeves == 1) { gCol = shirt; gMd = 7; } }                  // forearm
+    else if (cls < 3.5) { if (t < uSleeveT || uLongSleeves == 1) { gCol = (uCollar == 1 && uLongSleeves == 0 && t > uSleeveT - 0.07) ? uTrim : uSleeves; gMd = 7; } }   // upper arm: sleeve (own colour on some kits), cuffed
+    else if (cls < 4.5) { if (uLongSleeves == 1) { gCol = uSleeves; gMd = 7; } }                  // forearm
     else if (cls < 5.5) { if (uGloves == 1) { gCol = uGlove; gMd = 7; } }                      // hand
     else if (cls < 6.5) { if (t < uShortsT) { gCol = uShorts; gMd = 7; } }      // thigh: shorts down to the hem
     else if (cls < 7.5) { }
@@ -1228,7 +1228,7 @@
         const sleeveEnd = look.longSleeves ? 1.01 : sJ * 0.5;
         const prof = S.armRadius(sJ, k);
         const radius = (t, c) => prof(t, c) + (t < sleeveEnd ? (look.longSleeves ? 0.006 : 0.011) * k : 0);
-        const paint = (t) => (t < sleeveEnd ? col(kit.shirt, CL) : sk);
+        const paint = (t) => (t < sleeveEnd ? col(kit.sleeves || kit.shirt, CL) : sk);
         // the arm's front: the inside of the elbow bend (opposite to where the elbow sticks out), else the body's front
         const armF = bendDir(a.sh, a.elbow, a.hand, F, -1);
         // start the tube a little inside the shoulder so it grows out of the torso
@@ -1411,6 +1411,7 @@
         const ref = (V.skin && M.skinRef[V.skin]) || (dark ? [0.42, 0.29, 0.22] : [0.86, 0.67, 0.55]);
         const skinTint = lk.skin.map((c, i) => Math.min(1.6, Math.max(0.5, c / ref[i])));
         gl.uniform3fv(u.uShirt, kit.shirt); gl.uniform3fv(u.uShirt2, kit.shirt2 || kit.shirt); gl.uniform3fv(u.uTrim, kit.trim || kit.shirt);
+        gl.uniform3fv(u.uSleeves, kit.sleeves || kit.shirt);
         gl.uniform3fv(u.uShorts, kit.shorts); gl.uniform3fv(u.uSocks, kit.socks); gl.uniform3fv(u.uBoots, lk.boots);
         gl.uniform3fv(u.uGlove, lk.gloves || [1, 1, 1]);
         gl.uniform1i(u.uPattern, kit.pattern || 0); gl.uniform1i(u.uNum, kit.number || 0);
@@ -1671,7 +1672,7 @@
       const X = [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy + qz * qw), 2 * (qx * qz - qy * qw)];
       const Y = [2 * (qx * qy - qz * qw), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz + qx * qw)];
       const Z = [2 * (qx * qz + qy * qw), 2 * (qy * qz - qx * qw), 1 - 2 * (qx * qx + qy * qy)];
-      gl.uniform1i(mu.uBall, { brazuca: 1, jabulani: 2, cafusa: 3, trionda: 4 }[frame.ballDesign] || 0);
+      gl.uniform1i(mu.uBall, { brazuca: 1, jabulani: 2, trionda: 4 }[frame.ballDesign] || 0);
       const btex = this._ballTexture(frame.ballDesign), bnrm = btex && this._ballTexture(frame.ballDesign, true);
       if (btex) { gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, btex); gl.uniform1i(mu.uBallTex, 6); gl.uniform1i(mu.uBallTexOn, 1); gl.activeTexture(gl.TEXTURE0); }
       if (bnrm) { gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, bnrm); gl.uniform1i(mu.uBallNrm, 7); gl.uniform1i(mu.uBallNrmOn, 1); gl.activeTexture(gl.TEXTURE0); }

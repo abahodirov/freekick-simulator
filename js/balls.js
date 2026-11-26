@@ -2,14 +2,14 @@
  * Ball Laboratory data. Pure data, DOM-free (loaded by tests in Node).
  *
  * Each model's drag-crisis parameters are tagged with where they come from:
- *   measured  â€“ read from a published wind-tunnel study (cited)
- *   engine    â€“ the simulator's own fit, applied because no per-ball measurement is available
+ *   measured  – read from a published wind-tunnel study (cited)
+ *   engine    – the simulator's own fit, applied because no per-ball measurement is available
  * Values not listed in a source are NEVER invented: they fall back to the engine fit and are labelled so.
  *
- * Source for the three World Cup balls: Hong, S. & Asai, T. (2014) "Effect of panel shape of soccer ball on its
+ * Source for the measured World Cup balls: Hong, S. & Asai, T. (2014) "Effect of panel shape of soccer ball on its
  * flight characteristics", Scientific Reports 4, 5068. Critical Reynolds number (where the drag crisis completes)
  * and the drag coefficient there, for two panel orientations (A and B) in a wind tunnel, non-spinning ball.
- * The paper notes the Jabulani figures vary noticeably with orientation for Re â‰ˆ 3.0â€“5.0Ã—10âµ.
+ * The paper notes the Jabulani figures vary noticeably with orientation for Re ≈ 3.0–5.0×10⁵.
  */
 (function (root, factory) {
   const api = factory();
@@ -18,11 +18,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const HONG_ASAI = { title: 'Hong & Asai (2014), Effect of panel shape of soccer ball on its flight characteristics, Scientific Reports 4:5068', url: 'https://www.nature.com/articles/srep05068' };
-  const GOFF_CARRE = { title: 'Goff & CarrÃ© (2009), Trajectory analysis of a soccer ball, American Journal of Physics 77, 1020', url: 'https://doi.org/10.1119/1.3197221' };
+  const GOFF_CARRE = { title: 'Goff & Carré (2009), Trajectory analysis of a soccer ball, American Journal of Physics 77, 1020', url: 'https://doi.org/10.1119/1.3197221' };
 
   const BALLS = [
     { id: 'engine', name: 'Engine default ball', year: null, panels: 32, look: 'classic',
-      note: 'The simulator\'s standard drag-crisis fit (after Goff & CarrÃ© 2009): a generic modern ball, not a specific model.',
+      note: 'The simulator\'s standard drag-crisis fit (after Goff & Carré 2009): a generic modern ball, not a specific model.',
       orient: { A: { reCrit: 1.78e5, cdSuper: 0.155 } }, tag: 'engine', source: GOFF_CARRE },
     { id: 'brazuca', name: 'Adidas Brazuca', year: 2014, panels: 6, look: 'brazuca',
       note: 'Six identical propeller-shaped panels with a textured surface. Its drag crisis comes at the lowest speed of the three tested balls.',
@@ -31,11 +31,8 @@
       note: 'Eight thermally bonded panels and a smoother surface. Its drag crisis comes at the highest speed, close to typical free-kick speeds, and depends strongly on how the ball is oriented.',
       orient: { A: { reCrit: 3.3e5, cdSuper: 0.16 }, B: { reCrit: 3.6e5, cdSuper: 0.12 } }, tag: 'measured', source: HONG_ASAI,
       // smooth, nearly seamless skin: a low-spin strike wobbles harder and faster, and swerves late as the ball slows
-      // through its drag crisis (Re â‰ˆ 3.3Ã—10âµ â‰ˆ 23 m/s, right at the end of a free kick). Model values, not measured.
+      // through its drag crisis (Re ≈ 3.3×10⁵ ≈ 23 m/s, right at the end of a free kick). Model values, not measured.
       knuckle: { knCl: 0.27, knSpin: 0.085, knFreq: 1.25, knTrans: 1.6 } },
-    { id: 'cafusa', name: 'Adidas Cafusa', year: 2013, panels: null, look: 'cafusa',
-      note: 'The 2013 Confederations Cup ball, tested in the same wind-tunnel study as the Brazuca and Jabulani.',
-      orient: { A: { reCrit: 2.9e5, cdSuper: 0.14 }, B: { reCrit: 2.4e5, cdSuper: 0.16 } }, tag: 'measured', source: HONG_ASAI },
     { id: 'trionda', name: 'Adidas Trionda', year: 2026, panels: 4, look: 'trionda',
       note: 'The 2026 World Cup ball: four thermally bonded panels, the fewest of any World Cup ball. No wind-tunnel figures have been published, so it flies with the engine\'s drag model.',
       orient: { A: { reCrit: 1.78e5, cdSuper: 0.155 } }, tag: 'engine', source: GOFF_CARRE },

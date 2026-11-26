@@ -326,6 +326,20 @@ button.icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; s
 #btnPause.paused { color: var(--accent); background: var(--accent-soft); animation: breathe 1.6s ease-in-out infinite; }
 @keyframes breathe { 50% { box-shadow: 0 0 0 5px var(--accent-soft); } }
 #btnPanels.on { color: var(--text); background: var(--raise); }
+/* stage 35: dock buttons with a word beside the icon; panels hidden = the button lights up so it is easy to find again */
+#bottom button.labeled { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px 7px 9px; border-radius: 11px; font-size: 12.5px; font-weight: 600; }
+#bottom button.labeled svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#bottom button.labeled:disabled { opacity: .38; }
+body.hide-panels #btnPanels { background: var(--accent); color: #fff; box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); animation: fkPanelsPulse 2.4s ease-out 3; }
+@keyframes fkPanelsPulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } 100% { box-shadow: 0 0 0 12px transparent; } }
+.coach { position: absolute; left: 0; bottom: calc(100% + 12px); width: max-content; max-width: 280px; display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px 9px 13px; border-radius: 12px; background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 550; line-height: 1.35;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35); opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s; pointer-events: auto; }
+.coach.shown { opacity: 1; transform: none; }
+.coach::after { content: ''; position: absolute; left: 22px; top: 100%; border: 7px solid transparent; border-top-color: var(--accent); }
+.coach kbd { background: rgba(255,255,255,.22); color: #fff; border: 0; }
+.coach button { background: rgba(255,255,255,.2); color: #fff; border: 0; border-radius: 8px; padding: 5px 9px; font-size: 12px; font-weight: 650; cursor: pointer; }
+.coach button:hover { background: rgba(255,255,255,.32); }
 #btnPanels .l, #btnPanels .r { transition: opacity .25s; }
 #btnPanels:not(.on) .l, #btnPanels:not(.on) .r { opacity: .25; }
 
@@ -482,3 +496,22 @@ body.storying #railL { opacity: 0; pointer-events: none; }
 /* a lighter top bar now that the look switch has moved into Weather */
 #topbar { gap: 18px; }
 @media (max-width: 900px) { #hud div { min-width: 56px; padding: 4px 7px; } #hud b { font-size: 14px; } .rail button { width: 50px; } .rail button span { display: none; } #left { left: 76px; } #right { right: 76px; } }
+
+/* ───────────── stage 35: plain-language Ball lab ───────────── */
+.balllist.three { grid-template-columns: 1fr 1fr 1fr; }
+.balllist b { display: inline-flex; align-items: center; gap: 6px; }
+.sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.ballcard h3 { margin-top: 10px !important; }
+.meter { margin: 12px 0 4px; }
+.meter-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--text-2); }
+.meter-top b { color: var(--text); font-size: 12.5px; }
+.meter-bar { height: 7px; border-radius: 4px; background: var(--surface-solid); margin: 5px 0 3px; overflow: hidden; }
+.meter-bar i { display: block; height: 100%; border-radius: 4px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.meter small { color: var(--muted); font-size: 11px; }
+.race { display: grid; gap: 7px; margin: 6px 0; }
+.race > div { display: grid; grid-template-columns: 12px 64px 1fr; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
+.race b { color: var(--text); }
+details.science { margin: 16px 0 6px; border-top: 1px solid var(--grid); padding-top: 8px; }
+details.science > summary { cursor: pointer; font-size: 12px; color: var(--muted); list-style: none; }
+details.science > summary::before { content: '▸ '; }
+details.science[open] > summary::before { content: '▾ '; }

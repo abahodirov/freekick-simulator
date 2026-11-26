@@ -9,7 +9,7 @@ MH, UBC, OUT = sys.argv[1:4]
 PREV = sys.argv[4] if len(sys.argv) > 4 else None
 rng = np.random.default_rng(7)
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ base mesh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── base mesh ─────────────
 V, VT, faces = [], [], []
 grp = None
 for ln in open(os.path.join(MH, '3dobjs', 'base.obj')):
@@ -24,7 +24,7 @@ for g, f in faces: groups.setdefault(g, set()).update(v for v, t in f)
 body_faces = [f for g, f in faces if g == 'body']
 body_set = np.zeros(NV, bool); body_set[list(groups['body'])] = True
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ targets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── targets ─────────────
 _tc = {}
 def target(rel):
     if rel not in _tc:
@@ -52,7 +52,7 @@ def macro(muscle, weight, height, prop, race):
     return w
 
 def face(**kw):
-    """face(chin_prominent=0.5, ...) â†’ target weights; *_lr names apply to both sides; negative â†’ the decr/opposite."""
+    """face(chin_prominent=0.5, ...) → target weights; *_lr names apply to both sides; negative → the decr/opposite."""
     pairs = {
         'head_square': ('head/head-square', None), 'head_oval': ('head/head-oval', None), 'head_round': ('head/head-round', None),
         'head_rect': ('head/head-rectangular', None), 'head_tri': ('head/head-triangular', None), 'head_invtri': ('head/head-invertedtriangular', None),
@@ -94,7 +94,7 @@ def morph(spec):
         i, d = target(rel); P[i] += wt * d
     return P
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ rig and weights â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── rig and weights ─────────────
 RJ = json.load(open(os.path.join(MH, 'rigs', 'standard', 'rig.game_engine.json')))
 names0 = list(RJ.keys())
 order, seen = [], set()
@@ -141,7 +141,7 @@ def classOf(nm):
 CLS = np.array([classOf(names[JNT[v, 0]]) for v in range(NV)])
 childOf = {'thigh': 'calf', 'calf': 'foot', 'upperarm': 'lowerarm', 'lowerarm': 'hand'}
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ unwelded render mesh (UV seams) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── unwelded render mesh (UV seams) ─────────────
 key, orig, uvs, tris = {}, [], [], []
 for f in body_faces:
     ids = []
@@ -190,7 +190,7 @@ def interior(mask):
     bad[E[x, 0]] = True; bad[E[x, 1]] = True
     return mask & ~bad
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Quaternius hair (CC0), read as data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── Quaternius hair (CC0), read as data ─────────────
 COMP = {5126: ('<f4', 4), 5123: ('<u2', 2), 5121: ('u1', 1), 5125: ('<u4', 4)}
 NC = {'SCALAR': 1, 'VEC2': 2, 'VEC3': 3, 'VEC4': 4, 'MAT4': 16}
 def gl_load(name):
@@ -233,7 +233,7 @@ def radial(C, Pts, dirs):
     return out
 cQ = head_frame(QH); RQ = np.linalg.norm(QH - cQ, axis=1).mean()
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ players â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── players ─────────────
 # Approximate shapes chosen from public photos: build (muscle, weight), height, and broad face traits. Not scans.
 R = lambda c=0, a=0, s=0: {'caucasian': c, 'african': a, 'asian': s}
 PLAYERS = {
@@ -255,20 +255,22 @@ PLAYERS = {
     'wall4':      (macro(0.72, 0.34, 0.65, 0.8, R(1.0, 0.0, 0.0)), face(head_rect=0.4, nose_long=0.3, chin_prominent=0.3)),
     'wall5':      (macro(0.8, 0.4, 0.5, 0.7, R(0.55, 0.45, 0.0)), face(head_oval=0.3, cheekbones=0.3)),
     'keeper':     (macro(0.8, 0.42, 0.9, 0.85, R(0.9, 0.05, 0.05)), face(head_rect=0.3, chin_prominent=0.3, chin_width=0.3, nose_long=0.2, neck_thick=0.4)),
+    # stage 35 (added last, so every earlier player builds exactly as before): Payet, 1.75 m, stocky
+    'payet':      (macro(0.84, 0.42, 0.38, 0.7, R(0.72, 0.28, 0.0)), face(head_round=0.35, chin_width=0.4, cheek_volume=0.25, nose_wide=0.2, nose_hump=0.2, brows_down=0.3, neck_thick=0.6)),
 }
 # stage 26: the named players' MakeHuman face shapes at 1.4× (clipped to the target range), for a stronger likeness
-for _pid in ('ronaldo', 'messi', 'carlos', 'beckham', 'pirlo', 'juninho', 'ronaldinho', 'koeman', 'mihajlovic', 'nakamura', 'bale'):
+for _pid in ('ronaldo', 'messi', 'carlos', 'beckham', 'pirlo', 'juninho', 'ronaldinho', 'koeman', 'mihajlovic', 'nakamura', 'bale', 'payet'):
     _m, _f = PLAYERS[_pid]
     PLAYERS[_pid] = (_m, {k_: float(np.clip(v_ * 1.4, -1, 1)) for k_, v_ in _f.items()})
 # hair: (style keys, scalp-hair thickness scale, beard thickness in metres)
 ALLKEYS = ['hair_parted', 'hair_buzzed', 'hair_slick', 'hair_long', 'bun', 'beard']   # every player carries every shell (small)
 STYLE = {'ronaldo': (ALLKEYS, 1.1, 0), 'messi': (ALLKEYS, 1, 0.0046), 'carlos': (ALLKEYS, 0, 0), 'beckham': (ALLKEYS, 1.15, 0), 'pirlo': (ALLKEYS, 1, 0.004),
          'juninho': (ALLKEYS, 1, 0), 'ronaldinho': (ALLKEYS, 1.1, 0), 'koeman': (ALLKEYS, 1, 0), 'mihajlovic': (ALLKEYS, 1, 0),
-         'nakamura': (ALLKEYS, 1, 0), 'bale': (ALLKEYS, 1, 0.0042)}
+         'nakamura': (ALLKEYS, 1, 0), 'bale': (ALLKEYS, 1, 0.0042), 'payet': (ALLKEYS, 0.9, 0.0058)}
 ALLH = (ALLKEYS, 1.0, 0.0034)
 HEAD_K = 0.07          # stylized proportions: heads 7 % bigger (blended by the head-bone weight, so the neck stays smooth)
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ hair and beard grown as shells from the scalp and jaw â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── hair and beard grown as shells from the scalp and jaw ─────────────
 def load_mask(n):
     return np.asarray(Image.open(os.path.join(MH, 'textures', 'mpfb_%s.jpg' % n)).convert('L').resize((1024, 1024), Image.LANCZOS)) / 255.0
 def sstep(a, b, x): t_ = np.clip((x - a) / (b - a), 0, 1); return t_ * t_ * (3 - 2 * t_)
@@ -379,7 +381,7 @@ def smooth_shell(Q, E2, fixed, iters):
             Q = Q + lam * (S_ / np.maximum(deg_, 1)[:, None] - Q) * mv
     return Q
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ MakeHuman CC0 system assets: proxies (hair, eyebrows, eyelashes, eyes) fitted to each body â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── MakeHuman CC0 system assets: proxies (hair, eyebrows, eyelashes, eyes) fitted to each body ─────────────
 SYSD = os.environ.get('MH_SYS', '')
 def read_obj_any(path):
     vs, vts, fs = [], [], []
@@ -402,7 +404,7 @@ def read_mhclo(path):
             if len(s) >= 9: refs.append(([int(s[0]), int(s[1]), int(s[2])], [float(x) for x in s[3:6]], [float(x) for x in s[6:9]]))
             elif len(s) == 1: refs.append(([int(s[0]), int(s[0]), int(s[0])], [1.0, 0, 0], [0.0, 0, 0]))
     return sc, refs
-PROXIES = {   # key: (folder, obj, mhclo, texture, part) â€” part 1 = eyes, 2 = hair-like (alpha)
+PROXIES = {   # key: (folder, obj, mhclo, texture, part) — part 1 = eyes, 2 = hair-like (alpha)
     'eyes': ('eyes/high-poly', 'high-poly.obj', 'high-poly.mhclo', 'eyes/materials/brown_eye.png', 1),
     'brows': ('eyebrows/eyebrow001', 'eyebrow001.obj', 'eyebrow001.mhclo', 'eyebrows/eyebrow001/eyebrow001.png', 2),
     'brows_thick': ('eyebrows/eyebrow010', 'eyebrow010.obj', 'eyebrow010.mhclo', 'eyebrows/eyebrow010/eyebrow010.png', 2),
@@ -462,7 +464,7 @@ LOOK = {'ronaldo': ('h_short02', 'brows_thick', 'light2'), 'messi': ('h_short04'
         'nakamura': ('h_bob02', 'brows', 'asian'), 'bale': ('h_ponytail01', 'brows', 'light'),
         'wall0': ('h_short02', 'brows_thick', 'light2'), 'wall1': (None, 'brows', 'dark'), 'wall2': ('h_short01', 'brows', 'light2'),
         'wall3': (None, 'brows_thick', 'dark'), 'wall4': ('h_bob02', 'brows', 'light'), 'wall5': (None, 'brows', 'dark'),
-        'keeper': ('h_short04', 'brows_thick', 'light2')}
+        'keeper': ('h_short04', 'brows_thick', 'light2'), 'payet': ('h_short02', 'brows_thick', 'light2')}
 # ───────────── likeness: per-player face sculpting beyond the MakeHuman targets (stylized, caricature-leaning) ─────────────
 # ears, jaw width, face length, eye size, lip push, brow ridge, cheek width, nose size, chin push — soft regional
 # deformations around landmarks found on each player's own head. Values are approximations from public photos.
@@ -479,6 +481,7 @@ FACE = {
     'mihajlovic': dict(jaw=1.2, brow=0.008, face_long=1.06, chin_fwd=0.007),                                    # square jaw, heavy brow
     'nakamura':   dict(face_long=1.08, jaw=0.9, eyes=0.9, nose=0.9),
     'bale':       dict(ears=1.5, face_long=1.12, nose=1.1, chin_fwd=0.005, jaw=1.04),                           # ears, long face
+    'payet':      dict(jaw=1.12, cheeks=1.07, face_long=0.97, brow=0.006, eyes=0.95, nose=1.06),             # broad jaw under the beard, heavy brow
 }
 # per-player hair shaping on the scalp shells: quiff (m, front-top), fringe (m, over the forehead), sides (thickness
 # kept on the lower sides: < 1 = faded), vol (overall thickness)
@@ -488,11 +491,11 @@ HAIRMOD = {
     'ronaldo': dict(quiff=0.022, sides=0.25, spikes=1.0), 'messi': dict(quiff=0.014, sides=0.4),
     'beckham': dict(vol=1.45, sides=0.9, fringe=0.016, part=0.015),
     'koeman': dict(fringe=0.01, vol=1.15), 'pirlo': dict(vol=1.25), 'ronaldinho': dict(vol=1.35, locks=0.9),
-    'nakamura': dict(fringe=0.016, vol=1.2),
+    'nakamura': dict(fringe=0.016, vol=1.2), 'payet': dict(sides=0.3, vol=1.0, fringe=0.006),
 }
 # eyebrow weight (0.5 = medium): thin and groomed … heavy
 BROWW = {'ronaldo': 0.36, 'messi': 0.5, 'carlos': 0.6, 'beckham': 0.5, 'pirlo': 0.6, 'juninho': 0.5, 'ronaldinho': 0.55,
-         'koeman': 0.4, 'mihajlovic': 0.66, 'nakamura': 0.56, 'bale': 0.48}
+         'koeman': 0.4, 'mihajlovic': 0.66, 'nakamura': 0.56, 'bale': 0.48, 'payet': 0.64}
 def sculpt_face(P, ops):
     if not ops: return P
     P = P.copy()
@@ -545,7 +548,7 @@ def sculpt_face(P, ops):
     return P
 
 def build(pid, spec, keeper=False):
-    P = morph(spec) / 10.0                                     # decimetres â†’ metres
+    P = morph(spec) / 10.0                                     # decimetres → metres
     P[:, 1] -= P[body_set, 1].min()                            # soles on the ground
     P_unsculpted = P.copy()
     JP = np.array([head_pos(P, n) for n in names])
@@ -665,7 +668,7 @@ for pid, (mac, fac) in PLAYERS.items():
     print(pid, 'height %.3f m' % P[body_set, 1].max(), 'hair', list(hair))
     if pid == 'ronaldo': P_ron, JP_ron = P, JP
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ eye sphere (front pole along +z; iris painted by planar UV) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── eye sphere (front pole along +z; iris painted by planar UV) ─────────────
 RINGS, SEGS = 14, 24
 ep, euv, eidx = [], [], []
 for i in range(RINGS + 1):
@@ -679,7 +682,7 @@ for i in range(RINGS):
         a = i * (SEGS + 1) + j; b = a + SEGS + 1
         eidx += [a, b, a + 1, a + 1, b, b + 1]
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ textures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ───────────── textures ─────────────
 S = 1024
 def raster_posmap(P):
     """Per-texel 3D position (and coverage) of the body, by rasterising the UV layout."""
