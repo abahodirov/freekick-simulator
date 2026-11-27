@@ -38,9 +38,9 @@
       ] },
     { id: 'euro24', name: 'Fussballliebe', meta: 'UEFA Euro 2024 · Germany', photos: [
         { file: 'UEFA Euro 2024 Match Ball Fussballliebe.jpg', by: 'Bildersindtoll', lic: 'CC0', cap: 'A replica of the Fussballliebe' },
-        { local: 'assets/showcase/euro-bellingham.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Jude Bellingham with the Fussballliebe', pos: '50% 40%', ar: '5 / 6' },
-        { local: 'assets/showcase/euro-yamal-2024.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Lamine Yamal shoots for Spain against France, Euro 2024 semi-final, Munich', pos: '50% 18%' },
-        { local: 'assets/showcase/euro-musiala.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Jamal Musiala with the Fussballliebe, Germany v Ukraine, June 2024', pos: '72% 50%' }],
+        { local: 'assets/showcase/euro-bellingham.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Jude Bellingham with the Fussballliebe' },
+        { local: 'assets/showcase/euro-yamal-2024.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Lamine Yamal shoots for Spain against France, Euro 2024 semi-final, Munich' },
+        { local: 'assets/showcase/euro-musiala.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Jamal Musiala with the Fussballliebe, Germany v Ukraine, June 2024' }],
       facts: [
         { ph: 1, t: 'Love of football', x: 'That is what "Fussballliebe" means.', more: '"Fussballliebe" is German for "love of football". Toni Kroos played his last tournament with it, at home in Germany.' },
         { ph: 0, t: 'Ten host cities', x: 'Each city\'s stadium is drawn on a panel.', more: 'Berlin, Cologne, Dortmund, Düsseldorf, Frankfurt, Gelsenkirchen, Hamburg, Leipzig, Munich and Stuttgart: their names and stadium outlines are printed on the panels.' },
@@ -54,9 +54,9 @@
       ] },
     { id: 'ucl', name: 'UCL starball', meta: 'UEFA Champions League', photos: [
         { file: 'FC Salzburg gegen Paris Saint-Germain UEFA Champions League 10.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'The 2024–25 match ball before Salzburg v Paris Saint-Germain, 10 December 2024' },
-        { local: 'assets/showcase/ucl-zidane-2002.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Zinedine Zidane's volley in the 2002 final, Glasgow", pos: '50% 18%' },
-        { local: 'assets/showcase/ucl-messi-2009.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Lionel Messi heads in the 2009 final, Rome', pos: '50% 4%' },
-        { local: 'assets/showcase/ucl-bale-2018.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Gareth Bale's overhead kick in the 2018 final, Kyiv", pos: '50% 10%' }],
+        { local: 'assets/showcase/ucl-zidane-2002.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Zinedine Zidane's volley in the 2002 final, Glasgow" },
+        { local: 'assets/showcase/ucl-messi-2009.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Lionel Messi heads in the 2009 final, Rome' },
+        { local: 'assets/showcase/ucl-bale-2018.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Gareth Bale's overhead kick in the 2018 final, Kyiv" }],
       facts: [
         { ph: 3, t: 'The starball', x: 'The Champions League symbol since 1992.', more: 'Eight stars making up a ball: the starball has been the Champions League\'s symbol since the competition began in 1992.' },
         { ph: 1, t: 'Adidas since 2001', x: 'Every season\'s ball carries the stars.', more: 'Adidas has made the competition\'s match ball since 2001, each season with the stars on it in a new design.' },
@@ -256,9 +256,7 @@
     img.classList.remove('loaded'); img.onload = () => img.classList.add('loaded'); img.onerror = () => img.classList.add('failed');
     img.src = ph.local || photoUrl(ph.file); img.alt = ph.cap;
     img.style.objectPosition = ph.pos || '50% 40%';            // (the crop keeps the faces and the ball in the frame)
-    // the frame's shape (4:3, or taller where face and ball are far apart); CSS fits it inside the panel at any size
-    detail.style.setProperty('--ar', ph.ar || '4 / 3');
-    { const [w, h] = (ph.ar || '4 / 3').split('/').map(Number); detail.style.setProperty('--ar-n', (w / h).toFixed(4)); }
+    // (one rounded 4:3 frame for every photograph, filled edge to edge; CSS sizes it to fit the panel)
     capEl.textContent = ph.cap;                                  // (what the photo shows; the sources are in assets/CREDITS.md)
     $('bsDKick').textContent = b.name; $('bsDTitle').textContent = f.t; $('bsDText').textContent = f.more || f.x;
     detail.hidden = false; requestAnimationFrame(() => detail.classList.add('shown'));
