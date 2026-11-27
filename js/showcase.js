@@ -37,12 +37,15 @@
         { t: 'Grooves', x: 'Three pressed into every panel.' },
       ] },
     { id: 'euro24', name: 'Fussballliebe', meta: 'UEFA Euro 2024 · Germany', photos: [
-        { file: 'UEFA Euro 2024 Match Ball Fussballliebe.jpg', by: 'Bildersindtoll', lic: 'CC0', cap: 'A replica of the Fussballliebe' }],
+        { file: 'UEFA Euro 2024 Match Ball Fussballliebe.jpg', by: 'Bildersindtoll', lic: 'CC0', cap: 'A replica of the Fussballliebe' },
+        { local: 'assets/showcase/euro-bellingham.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Jude Bellingham with the Fussballliebe', pos: '50% 40%', ar: '5 / 6' },
+        { local: 'assets/showcase/euro-yamal-2024.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Lamine Yamal shoots for Spain against France, Euro 2024 semi-final, Munich', pos: '50% 18%' },
+        { local: 'assets/showcase/euro-musiala.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Jamal Musiala on the ball for Germany (a Nations League match, with its ball)', pos: '50% 100%', ar: '5 / 6' }],
       facts: [
-        { ph: 0, t: 'Love of football', x: 'That is what "Fussballliebe" means.', more: '"Fussballliebe" is German for "love of football". Toni Kroos played his last tournament with it, at home in Germany.' },
-        { ph: -1, t: 'Ten host cities', x: 'Each city\'s stadium is drawn on a panel.', more: 'Berlin, Cologne, Dortmund, Düsseldorf, Frankfurt, Gelsenkirchen, Hamburg, Leipzig, Munich and Stuttgart: their names and stadium outlines are printed on the panels.' },
-        { ph: -1, t: 'Connected ball', x: 'A sensor told the referees about every touch.', more: 'A motion sensor inside reported every touch to the video referees, for offsides and handballs.' },
-        { ph: -1, t: 'Steadiest flight', x: 'A no-spin strike hardly wobbles.', more: 'Its own wind-tunnel figures have not been published, so here it flies with those of the Al Rihla (2022), the closest published design: the smallest knuckling forces of the balls tested. Hit it with no spin and it barely wobbles.' },
+        { ph: 1, t: 'Love of football', x: 'That is what "Fussballliebe" means.', more: '"Fussballliebe" is German for "love of football". Toni Kroos played his last tournament with it, at home in Germany.' },
+        { ph: 0, t: 'Ten host cities', x: 'Each city\'s stadium is drawn on a panel.', more: 'Berlin, Cologne, Dortmund, Düsseldorf, Frankfurt, Gelsenkirchen, Hamburg, Leipzig, Munich and Stuttgart: their names and stadium outlines are printed on the panels.' },
+        { ph: 2, t: 'Connected ball', x: 'A sensor told the referees about every touch.', more: 'A motion sensor inside reported every touch to the video referees, for offsides and handballs.' },
+        { ph: 3, t: 'Steadiest flight', x: 'A no-spin strike hardly wobbles.', more: 'Its own wind-tunnel figures have not been published, so here it flies with those of the Al Rihla (2022), the closest published design: the smallest knuckling forces of the balls tested. Hit it with no spin and it barely wobbles.' },
       ],
       anatomy: [
         { t: '20 panels', x: 'Twelve large shapes and eight triangles.' },
@@ -246,6 +249,9 @@
     img.classList.remove('loaded'); img.onload = () => img.classList.add('loaded'); img.onerror = () => img.classList.add('failed');
     img.src = ph.local || photoUrl(ph.file); img.alt = ph.cap;
     img.style.objectPosition = ph.pos || '50% 40%';            // (the crop keeps the faces and the ball in the frame)
+    img.style.aspectRatio = ph.ar || '';                        // (a taller frame where face and ball are far apart:
+    img.style.width = ph.ar ? 'auto' : '';                      //  narrower, so it keeps its shape within the panel's height)
+    img.style.height = ph.ar ? '440px' : '';
     capEl.textContent = ph.cap + ' · Photo: ' + (ph.by === 'unknown' ? '' : ph.by + ', ') + ph.lic + (ph.local ? '' : ', ');
     if (!ph.local) {
       const a = document.createElement('a'); a.href = pageUrl(ph.file); a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Wikimedia Commons';

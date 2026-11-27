@@ -89,6 +89,8 @@ twice, credited under each picture. Where no free photograph of a ball could be 
 
 `assets/showcase/ucl-zidane-2002.webp`, `ucl-messi-2009.webp` and `ucl-bale-2018.webp` (the 2002, 2009 and 2018
 Champions League finals) were supplied by the project owner; they appear to be press-agency photographs.
+`euro-bellingham.webp`, `euro-yamal-2024.webp` and `euro-musiala.webp` were supplied by the project owner too
+(credited in the owner's own document).
 
 `assets/showcase/trionda-sensor.webp` (the Trionda's sensor module out of its panel) was supplied by the project owner;
 it appears to be an adidas product photograph.

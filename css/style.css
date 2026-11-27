@@ -814,3 +814,5 @@ button.bs-call:hover { transform: translateY(-2px) scale(1.025); background: lin
 .bs-detail.nophoto figure { display: none; }
 /* every photograph in the same rounded 4:3 frame, cropped around its subject (object-position per photo) */
 .bs-detail img { aspect-ratio: 4 / 3; max-height: none; width: 100%; object-fit: cover; border-radius: 22px; background: #111; }
+/* (a taller frame for a photo whose face and ball are far apart: kept to the panel's height) */
+.bs-detail img { max-height: 440px; margin: 0 auto; }
