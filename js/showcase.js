@@ -19,10 +19,10 @@
   // t: the fact's title, x: one line on the map, more: the story with the picture
   const SHOW = [
     { id: 'trionda', name: 'Trionda', meta: 'FIFA World Cup 2026 · Canada, Mexico, USA', photos: [
-        { file: 'Adidas Trionda ball.jpg', by: 'OhanaUnited', lic: 'CC BY-SA 4.0', cap: 'The Trionda on display in Toronto' },
+        { file: 'FIFA World Cup 2026 Draw Reception (54972841852).jpg', by: 'UK in USA', lic: 'CC BY-SA 4.0', cap: 'The Trionda at the World Cup draw in Washington, December 2025' },
         { file: 'France v Senegal 16 June 2026-443.jpg', by: 'Bryan Berlin', lic: 'CC BY-SA 4.0', cap: 'The Trionda on the pitch at France v Senegal, 16 June 2026' },
         { file: 'Lionel Messi Argentina v Egypt 7 July 2026-250.jpg', by: 'Bryan Berlin', lic: 'CC BY-SA 4.0', cap: 'Lionel Messi strikes the Trionda, Argentina v Egypt, 7 July 2026' },
-        { file: 'Kylian Mbappe France v Morocco 9 July 2026-163.jpg', by: 'Bryan Berlin', lic: 'CC BY-SA 4.0', cap: 'Kylian Mbappé with the Trionda, France v Morocco, 9 July 2026' },
+        { file: 'Jonathan David Canada v Qatar 18 June 2026-180.jpg', by: 'Bryan Berlin', lic: 'CC BY-SA 4.0', cap: 'Jonathan David shoots, Canada v Qatar, 18 June 2026' },
         { local: 'assets/showcase/trionda-sensor.webp', by: 'adidas', lic: 'supplied by the project owner', cap: 'The Trionda\'s sensor module, lifted out of its panel' }],
       facts: [
         { ph: 0, t: 'Four panels', x: 'The fewest of any World Cup ball, bonded with heat.', more: 'Only four panels: the fewest of any World Cup ball, bonded with heat and adhesive instead of being stitched.' },
@@ -50,10 +50,10 @@
         { t: 'Sensor', x: 'Reports every touch to the referees.' },
       ] },
     { id: 'ucl', name: 'UCL starball', meta: 'UEFA Champions League', photos: [
-        { file: 'UEFA Champions League ball 2021-2022.jpg', by: 'Ararat Trvants', lic: 'CC0', cap: 'A Champions League ball of 2021–22' },
-        { file: '2009 UEFA Champions League Final ball.JPG', by: 'PeeJay2K3', lic: 'CC BY-SA 3.0', cap: 'The ball of the 2009 final' },
-        { file: 'Adidas Finale 19 UEFA Champions League Final match ball at Adidas, 425 Oxford Street, June 2024.jpg', by: 'No Swan So Fine', lic: 'CC BY-SA 4.0', cap: 'The Finale 19, ball of the 2019 final' },
-        { file: '2011 UEFA Champions League Final ball.JPG', by: 'PeeJay2K3', lic: 'CC BY-SA 3.0', cap: 'The ball of the 2011 final' }],
+        { file: 'FC Salzburg gegen Paris Saint-Germain UEFA Champions League 10.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'The 2024–25 match ball before Salzburg v Paris Saint-Germain, 10 December 2024' },
+        { file: 'FC Salzburg gegen Paris Saint-Germain UEFA Champions League 12.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'Warming up with the 2024–25 ball, Salzburg v Paris Saint-Germain' },
+        { file: 'FC Salzburg vs. Atletico Madrid (2025-01-29 UEFA Championsleague) 27.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'The match ball carried out for Salzburg v Atlético Madrid, 29 January 2025' },
+        { file: 'FC Salzburg gegen Paris Saint-Germain UEFA Champions League 05.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'A keeper claims the 2024–25 ball, Salzburg v Paris Saint-Germain' }],
       facts: [
         { ph: 0, t: 'The starball', x: 'The Champions League symbol since 1992.', more: 'Eight stars making up a ball: the starball has been the Champions League\'s symbol since the competition began in 1992.' },
         { ph: 1, t: 'Adidas since 2001', x: 'Every season\'s ball carries the stars.', more: 'Adidas has made the competition\'s match ball since 2001, each season with the stars on it in a new design.' },

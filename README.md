@@ -34,7 +34,8 @@ All nine suites (107 tests): `for t in tests/*.test.js; do node "$t"; done`
   each dark star one panel, grooves along every edge, domed panels, embossed outlines and red marks.
 - **More room when a ball comes apart** (the Trionda's big panels no longer overlap; the starball's stars stand clear).
 - **One ball on screen**: the corner logo is empty while the showcase is open, and the ball flying home becomes it.
-- **Sharper photographs that always show the ball**, one per fact.
+- **Sharper photographs that always show the ball**, one per fact: Messi and Jonathan David striking the Trionda at
+  the 2026 World Cup, and the 2024-25 Champions League ball at Salzburg v Paris Saint-Germain and Atlético Madrid.
 - **A softer sound** for turning the ball: airy and musical, no clicks.
 
 ## What's new in v2.0.3

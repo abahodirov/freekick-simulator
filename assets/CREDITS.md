@@ -77,11 +77,11 @@ green, one panel per dark star, with its grooves and print (`tools/ball_ucl_reco
 
 Loaded from Wikimedia Commons at run time (not shipped), at 1600 px, each showing the ball, one per fact and none
 twice, credited under each picture. Where no free photograph of a ball could be found, the fact shows text only.
-- Trionda: in Toronto, OhanaUnited, CC BY-SA 4.0; on the pitch at France v Senegal, Lionel Messi (Argentina v Egypt)
-  and Kylian Mbappé (France v Morocco) at the 2026 World Cup, Bryan Berlin, CC BY-SA 4.0.
+- Trionda: at the World Cup draw reception, UK in USA, CC BY-SA 4.0; on the pitch at France v Senegal, Lionel Messi
+  (Argentina v Egypt) and Jonathan David (Canada v Qatar) at the 2026 World Cup, Bryan Berlin, CC BY-SA 4.0.
 - Fussballliebe: a replica, Bildersindtoll, CC0 (the only free photograph of the ball found).
-- Champions League: a 2021-22 ball, Ararat Trvants, CC0; the 2009 and 2011 final balls, PeeJay2K3, CC BY-SA 3.0; the
-  Finale 19, No Swan So Fine, CC BY-SA 4.0.
+- Champions League (the 2024-25 ball): Salzburg v Paris Saint-Germain (10 December 2024) and Salzburg v Atlético
+  Madrid (29 January 2025), Werner100359, CC BY-SA 4.0.
 - Jabulani: on the shelf and with Germany's kit, BrokenSphere, CC BY-SA 3.0; Brazil training in Soweto, Marcello
   Casal Jr / Agência Brasil, CC BY 3.0 BR; the Jo'bulani, warrenski, CC BY-SA 2.0.
 - Classic: the 1970 Telstar, Zac Allan, public domain; giant Telstars in Berlin, Times, CC BY-SA 3.0; the 1974 Telstar
