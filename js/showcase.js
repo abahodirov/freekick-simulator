@@ -51,14 +51,14 @@
       ] },
     { id: 'ucl', name: 'UCL starball', meta: 'UEFA Champions League', photos: [
         { file: 'FC Salzburg gegen Paris Saint-Germain UEFA Champions League 10.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'The 2024–25 match ball before Salzburg v Paris Saint-Germain, 10 December 2024' },
-        { file: 'FC Salzburg gegen Paris Saint-Germain UEFA Champions League 12.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'Warming up with the 2024–25 ball, Salzburg v Paris Saint-Germain' },
-        { file: 'FC Salzburg vs. Atletico Madrid (2025-01-29 UEFA Championsleague) 27.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'The match ball carried out for Salzburg v Atlético Madrid, 29 January 2025' },
-        { file: 'FC Salzburg gegen Paris Saint-Germain UEFA Champions League 05.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'A keeper claims the 2024–25 ball, Salzburg v Paris Saint-Germain' }],
+        { local: 'assets/showcase/ucl-zidane-2002.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Zinedine Zidane's volley in the 2002 final, Glasgow" },
+        { local: 'assets/showcase/ucl-messi-2009.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Lionel Messi heads in the 2009 final, Rome' },
+        { local: 'assets/showcase/ucl-bale-2018.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Gareth Bale's overhead kick in the 2018 final, Kyiv" }],
       facts: [
-        { ph: 0, t: 'The starball', x: 'The Champions League symbol since 1992.', more: 'Eight stars making up a ball: the starball has been the Champions League\'s symbol since the competition began in 1992.' },
+        { ph: 3, t: 'The starball', x: 'The Champions League symbol since 1992.', more: 'Eight stars making up a ball: the starball has been the Champions League\'s symbol since the competition began in 1992.' },
         { ph: 1, t: 'Adidas since 2001', x: 'Every season\'s ball carries the stars.', more: 'Adidas has made the competition\'s match ball since 2001, each season with the stars on it in a new design.' },
-        { ph: 2, t: 'Seamless', x: 'Recent balls are bonded with heat.', more: 'Recent Champions League balls are thermally bonded, with no stitched seams, around a butyl bladder.' },
-        { ph: 3, t: 'No wind-tunnel data', x: 'So here it flies like the Classic.', more: 'No wind-tunnel figures have been published for any Champions League ball, so in this game it flies like the Classic rather than with invented numbers.' },
+        { ph: 0, t: 'Seamless', x: 'Recent balls are bonded with heat.', more: 'Recent Champions League balls are thermally bonded, with no stitched seams, around a butyl bladder.' },
+        { ph: 2, t: 'No wind-tunnel data', x: 'So here it flies like the Classic.', more: 'No wind-tunnel figures have been published for any Champions League ball, so in this game it flies like the Classic rather than with invented numbers.' },
       ],
       anatomy: [
         { t: 'White panels', x: 'Twenty, with embossed outlines and red marks.' },
@@ -241,7 +241,7 @@
     if (!ph) { img.removeAttribute('src'); capEl.textContent = ''; detail.hidden = false; requestAnimationFrame(() => detail.classList.add('shown')); if (window.FKSound) FKSound.ui('open'); return; }
     img.classList.remove('loaded'); img.onload = () => img.classList.add('loaded'); img.onerror = () => img.classList.add('failed');
     img.src = ph.local || photoUrl(ph.file); img.alt = ph.cap;
-    capEl.textContent = ph.cap + ' · Photo: ' + ph.by + ', ' + ph.lic + (ph.local ? '' : ', ');
+    capEl.textContent = ph.cap + ' · Photo: ' + (ph.by === 'unknown' ? '' : ph.by + ', ') + ph.lic + (ph.local ? '' : ', ');
     if (!ph.local) {
       const a = document.createElement('a'); a.href = pageUrl(ph.file); a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Wikimedia Commons';
       capEl.append(a);

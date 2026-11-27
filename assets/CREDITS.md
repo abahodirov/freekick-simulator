@@ -87,6 +87,9 @@ twice, credited under each picture. Where no free photograph of a ball could be 
 - Classic: the 1970 Telstar, Zac Allan, public domain; giant Telstars in Berlin, Times, CC BY-SA 3.0; the 1974 Telstar
   Durlast, Haeferl, CC BY-SA 3.0.
 
+`assets/showcase/ucl-zidane-2002.webp`, `ucl-messi-2009.webp` and `ucl-bale-2018.webp` (the 2002, 2009 and 2018
+Champions League finals) were supplied by the project owner; they appear to be press-agency photographs.
+
 `assets/showcase/trionda-sensor.webp` (the Trionda's sensor module out of its panel) was supplied by the project owner;
 it appears to be an adidas product photograph.
 
