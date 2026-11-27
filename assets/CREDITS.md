@@ -55,7 +55,50 @@ FBX → `assets/balls/<id>.js`, textures downsized to 2048 px JPEG) and baked on
 `tools/ball_bake.py`, which also bakes each model's normal map (grooves and surface relief) into a sphere normal map:
 - **Jabulani**: FBX + 3K colour and normal textures (`Jabula_3k.png`, `Jabula_3k_Normal.png`).
 - **Trionda**: "Trionda 2026.glb", with its embedded colour and normal maps.
+- **Fussballliebe (Euro 2024)**: "Soccer Ball Fussballliebe Euro 2024" by jonathanborges3d (Sketchfab), glTF with
+  colour and normal maps; its triangle strips are read by `tools/ball_model.js`.
+- **Champions League ball** (by Sintakinar Blogspot): OBJ + colour texture. It is a plain UV sphere with no relief, so
+  `tools/ball_relief.py` cuts a groove along every white star panel and writes the matching normal map. Two marks
+  printed inside its panels that do not belong on a Champions League ball (a Europa League and a World Cup 2022 logo)
+  were painted out.
 - **Classic ball** ("Soccer ball / Football", by RPSebb on Sketchfab): its texture is plain black and white, so the
   classic ball is now drawn procedurally (js/render.js, js/ballview.js) with seam grooves, stitching, domed panels and
   a pebbled skin; the model file is no longer shipped. Rebuild it any time with `tools/ball_model.js`.
 The ball designs themselves belong to adidas.
+
+Panel maps for the showcase's exploded view (`tools/ball_panels.py`): the Trionda's 4 and the Fussballliebe's 20
+panels are the texture islands of their models; the starball's stars come from its grooves; the Jabulani's 8 are
+approximated on the corners of a cube from its ring graphics (`tools/ball_panels_jabulani.py`: its seams are too faint
+to trace); the starball's printed ground is split under its stars (`tools/ball_panels_ucl_ground.py`); the Classic's 32
+are its geometry.
+
+## Showcase photographs
+
+Loaded from Wikimedia Commons at run time (not shipped), one per fact, credited under each picture:
+- 2026 World Cup (Trionda): Lionel Messi, Argentina v Egypt; Cristiano Ronaldo, Croatia v Portugal; Kylian Mbappé,
+  France v Morocco: Bryan Berlin, CC BY-SA 4.0. The Trionda in Toronto: OhanaUnited, CC BY-SA 4.0.
+- Euro 2024 (Fussballliebe): Hamburg fan zone, Frank Schwichtenberg, CC BY-SA 4.0; opening match, Monthejags, CC0;
+  replica ball, Bildersindtoll, CC0; Lamine Yamal, La Moncloa (attribution).
+- Champions League: 2021–22 balls, Ararat Trvants (CC0) and Vyacheslav Evdokimov (CC BY-SA 3.0); Finale 19, No Swan So
+  Fine, CC BY-SA 4.0; RB Leipzig v Tottenham 2020, Steffen Prößdorf, CC BY-SA 4.0.
+- 2010 World Cup (Jabulani): the ball, Shawn Smith, CC BY 2.0; Brazil training, Marcello Casal Jr / Agência Brasil,
+  CC BY 3.0 BR; Netherlands v Uruguay, Jimmy Baikovicius, CC BY-SA 2.0; Uruguay v France, Warren Rohner, CC BY-SA 2.0.
+- 1970 (Classic): the Telstar, Zac Allan, public domain; Pelé scoring against Czechoslovakia (UPI) and celebrating
+  (AP), public domain; the Telstar Durlast, shine2010, CC BY 2.0.
+
+`assets/showcase/trionda-sensor.webp` (the Trionda's sensor module out of its panel) was supplied by the project owner;
+it appears to be an adidas product photograph.
+
+## Showcase backgrounds
+
+"Aurora" and "Plasma" from React Bits (reactbits.dev/backgrounds), ported from their React components to plain
+WebGL2 in `js/backdrop.js` with the shaders unchanged; see React Bits for their licence.
+
+## Ball aerodynamics
+
+- Hong & Asai (2014), Effect of panel shape of soccer ball on its flight characteristics, Scientific Reports 4:5068.
+- Comparative study of the aerodynamic characteristics and flight behavior of the FIFA World Cup 2026 ball Trionda,
+  Scientific Reports (2026): critical Reynolds numbers of Trionda, Al Rihla, Telstar 18 and Brazuca, Trionda's
+  supercritical drag, and the ranking of their unsteady side and lift forces.
+- Goff, Hong, Liu & Asai (2026), Trionda: Enhanced Surface Roughness Relative to Previous FIFA World Cup Match Balls,
+  Applied Sciences 16:2808 (seam length, width and depth), and J. E. Goff's summary in The Conversation (May 2026).

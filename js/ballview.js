@@ -13,20 +13,33 @@
 
   const VS = `#version 300 es
   in vec3 aP; in vec3 aN; in vec2 aUV;
-  uniform mat3 uR; uniform float uAspect, uZoom;
-  out vec3 vL; out vec3 vN; out vec2 vUV;
+  uniform mat3 uR, uM; uniform float uAspect, uZoom, uScale; uniform vec3 uOff;
+  out vec3 vL; out vec3 vN; out vec2 vUV; out vec3 vW;
   void main() {
-    vL = aP; vN = uR * aN; vUV = aUV;
-    vec3 w = uR * aP;
+    vL = aP; vN = uR * normalize(inverse(transpose(uM)) * aN); vUV = aUV;
+    vec3 w = uR * (uM * aP * uScale + uOff); vW = w;
     float z = 3.2 - w.z;                                 // camera on +z looking at the origin
     gl_Position = vec4(w.x * uZoom / uAspect, w.y * uZoom, (z - 2.0) / 3.0 * z, z);
   }`;
   const FS = `#version 300 es
   precision highp float;
-  in vec3 vL; in vec3 vN; in vec2 vUV;
+  in vec3 vL; in vec3 vN; in vec2 vUV; in vec3 vW;
   uniform int uBall, uTex, uNrmOn; uniform sampler2D uImg, uNrmMap; uniform vec3 uPC[12]; uniform vec3 uHC[20];
   uniform mat3 uR;
+  // the exploded view: draw only panel uPanel (-1: the whole ball; 255: the ground that stays), the core inside
+  uniform int uPanel, uPidOn, uCore; uniform sampler2D uPid;
   out vec4 o;
+  int panelId(vec3 p) {
+    if (uPidOn == 1) {
+      vec2 uv = vec2(fract(atan(p.z, p.x) / 6.2831853), acos(clamp(p.y, -1.0, 1.0)) / 3.1415927);
+      return int(texture(uPid, uv).r * 255.0 + 0.5);
+    }
+    // the classic ball: the nearest of its 12 pentagon and 20 hexagon centres (as its pattern decides)
+    float s1 = -2.0; int id = 0;
+    for (int i = 0; i < 12; i++) { float s = dot(p, uPC[i]); if (s > s1) { s1 = s; id = i; } }
+    for (int i = 0; i < 20; i++) { float s = dot(p, uHC[i] * 1.01174); if (s > s1) { s1 = s; id = 12 + i; } }
+    return id;
+  }
   float hash3(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
   float vnoise(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     float a = mix(mix(hash3(i), hash3(i + vec3(1,0,0)), f.x), mix(hash3(i + vec3(0,1,0)), hash3(i + vec3(1,1,0)), f.x), f.y);
@@ -56,7 +69,7 @@
       float row = exp(-pow((gap - G0) / SG, 2.0)), dash = smoothstep(0.32, 0.12, abs(along - 0.5));
       float sw = clamp(SG / (1.6 * fw), 0.0, 1.0), hole = row * dash * sw;
       dh += DS * dash * sw * 2.0 * (gap - G0) / (SG * SG) * row;
-      tilt = -dh * g - PF * 30.0 * (c1 - p * dot(c1, p)) + grain(p, pent > 0.5 ? 0.035 : 0.06);   // + a dome per panel
+      tilt = -dh * g - PF * 30.0 * (c1 - p * dot(c1, p)) + grain(p, pent > 0.5 ? 0.06 : 0.09) + grain(p * 0.37, 0.05);   // + a dome per panel
       seam = (1.0 - smoothstep(0.0025, 0.0025 + 2.0 * fw + 0.003, gap)) * 0.85;
       vec3 panel = pent > 0.5 ? vec3(0.035, 0.037, 0.045) : vec3(0.93, 0.925, 0.9);
       panel *= 1.0 - 0.3 * exp(-(gap * gap) / (6.0 * W * W));
@@ -115,8 +128,33 @@
   void main() {
     vec3 N = normalize(vN), V = vec3(0, 0, 1), p = normalize(vL);
     float seam; vec3 base;
-    if (uTex == 1) {
-      base = texture(uImg, vUV).rgb; seam = 0.0; tilt = grain(p, 0.05);
+    if (uPanel >= 0 && panelId(p) != uPanel) discard;
+    // the back of a panel, seen through a gap: its normal faces away from the camera (on +z at 3.2). Decided from the
+    // geometry, not the winding: the generated sphere and the ball models wind their triangles opposite ways
+    bool inside = dot(N, vec3(0.0, 0.0, 3.2) - vW) < 0.0;
+    if (uCore == 2) {
+      float tr = step(0.82, fract(p.x * 9.0)) + step(0.86, fract(p.y * 7.0 + 0.3));
+      base = mix(vec3(0.03, 0.06, 0.05), vec3(0.78, 0.62, 0.25), clamp(tr, 0.0, 1.0) * step(0.0, p.z) * 0.8);
+      float led = exp(-dot(p.xy - vec2(0.35, 0.2), p.xy - vec2(0.35, 0.2)) * 60.0) * step(0.0, p.z);
+      float rim = 1.0 - smoothstep(0.7, 0.98, length(p.xy));
+      base = mix(vec3(0.1, 0.42, 0.3), base, rim);                      // a green board edge
+      o = vec4(base * (0.6 + 0.6 * max(dot(normalize(vN), normalize(vec3(-0.5, 0.7, 0.6))), 0.0)) + vec3(0.2, 0.85, 1.0) * led * 2.2, 1.0);
+      return;
+    } else if (uCore == 3) {
+      float l = max(dot(normalize(vN), normalize(vec3(-0.5, 0.7, 0.6))), 0.0);
+      float sp = pow(max(dot(normalize(vN), normalize(normalize(vec3(-0.5, 0.7, 0.6)) + vec3(0, 0, 1))), 0.0), 40.0);
+      o = vec4(vec3(0.42, 0.43, 0.46) * (0.35 + 0.65 * l) + sp * 0.6, 1.0);
+      return;
+    } else if (uCore == 1) {
+      // the carcass under the panels: a dark, wound layer around the bladder (threads in two crossing directions)
+      float t = abs(sin(dot(p, vec3(0.0, 1.0, 0.35)) * 140.0)) * abs(sin(dot(p, vec3(0.6, -0.2, 0.75)) * 140.0));
+      base = mix(vec3(0.045, 0.047, 0.055), vec3(0.15, 0.145, 0.14), smoothstep(0.2, 0.9, t)); seam = 0.0; tilt = vec3(0.0);
+    } else if (inside) {
+      // the back of a panel: the foam layer that sits under the printed skin
+      base = vec3(0.78, 0.77, 0.73) * (0.92 + 0.08 * vnoise(p * 60.0)); seam = 0.0; tilt = vec3(0.0);
+    } else if (uTex == 1) {
+      base = texture(uImg, vUV).rgb; seam = 0.0; tilt = grain(p, 0.085) + grain(p * 0.37, 0.06);
+      base *= 0.95 + 0.07 * vnoise(p * 420.0) * (1.0 - smoothstep(0.35, 1.1, length(fwidth(p * 420.0))));
       if (uNrmOn == 1) {
         // the model's relief, baked by direction (tools/ball_bake.py): sampled with seam-free gradients
         float lu = atan(p.z, p.x) / 6.2831853, lv = acos(clamp(p.y, -1.0, 1.0)) / 3.1415927;
@@ -126,12 +164,13 @@
         if (abs(dy2.x) < abs(dy.x)) dy.x = dy2.x;
         vec3 nO = textureGrad(uNrmMap, uv, dx, dy).rgb * 2.0 - 1.0;
         float up = dot(nO, p);
-        tilt += 1.6 * (nO - p * up);
+        tilt += 2.1 * (nO - p * up);
         base *= 1.0 - 0.45 * smoothstep(0.015, 0.25, 1.0 - up);
       }
     }
     else base = pattern(p, seam);
     N = normalize(uR * normalize(p + tilt));
+    if (inside) N = -N;
     base = mix(base, vec3(0.12, 0.12, 0.13), seam);
     // studio light: a soft key from the upper left, a cool fill, sky/ground ambience, a satin (not glossy) sheen
     vec3 L1 = normalize(vec3(-0.55, 0.7, 0.55)), L2 = normalize(vec3(0.85, -0.1, 0.45));
@@ -183,9 +222,13 @@
       const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
       if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
       this.pr = pr; this.u = {};
-      for (const n of ['uR', 'uAspect', 'uZoom', 'uBall', 'uTex', 'uImg', 'uPC', 'uHC', 'uNrmOn', 'uNrmMap']) this.u[n] = gl.getUniformLocation(pr, n);
+      for (const n of ['uR', 'uM', 'uAspect', 'uZoom', 'uBall', 'uTex', 'uImg', 'uPC', 'uHC', 'uNrmOn', 'uNrmMap', 'uScale', 'uOff', 'uPanel', 'uPidOn', 'uPid', 'uCore']) this.u[n] = gl.getUniformLocation(pr, n);
       gl.useProgram(pr);
       const cc = classicCentres(); gl.uniform3fv(this.u.uPC, cc.pc); gl.uniform3fv(this.u.uHC, cc.hc);
+      // the classic ball's panels for the exploded view: pentagons 0-11, hexagons 12-31
+      this.classicPanels = []; for (let i = 0; i < 12; i++) this.classicPanels.push(cc.pc.slice(i * 3, i * 3 + 3));
+      for (let i = 0; i < 20; i++) this.classicPanels.push(cc.hc.slice(i * 3, i * 3 + 3));
+      this.explode = 0; this.explodeTo = 0; this.explodeV = 0;
       this.sphere = this._mesh(sphere(96, 64));
       this.models = {};
       this.yaw = 0.6; this.pitch = 0.35; this.vy = 0; this.ball = 'trionda';
@@ -229,14 +272,47 @@
       };
       m.tex = load(src.texture);
       if (src.sphereNormal) m.nrm = load(src.sphereNormal, true);       // the grooves and relief (by direction)
+      if (src.panelMap) {                                                // its panels, for the exploded view
+        const img = new Image();
+        img.onload = () => {
+          const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+          gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+          for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.REPEAT], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+          // each panel's centre: the mean direction of its pixels (weighted by their area on the sphere)
+          const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+          const c2 = cv.getContext('2d'); c2.drawImage(img, 0, 0);
+          const px = c2.getImageData(0, 0, img.width, img.height).data, acc = new Map();
+          for (let y = 0; y < img.height; y += 2) {
+            const col = (y + 0.5) / img.height * Math.PI, sc = Math.sin(col), cy = Math.cos(col);
+            for (let x = 0; x < img.width; x += 2) {
+              const id = px[(y * img.width + x) * 4]; if (id === 255) continue;
+              const lon = (x + 0.5) / img.width * Math.PI * 2, a = acc.get(id) || [0, 0, 0];
+              a[0] += sc * Math.cos(lon) * sc; a[1] += cy * sc; a[2] += sc * Math.sin(lon) * sc; acc.set(id, a);
+            }
+          }
+          m.panels = [...acc.keys()].sort((a, b) => a - b).map((id) => { const a = acc.get(id), l = Math.hypot(...a) || 1; return { id, c: a.map((v) => v / l) }; });
+          m.ground = px.some((v, i) => i % 4 === 0 && v === 255);
+          if (src.panelInner !== undefined) m.inner = src.panelInner;
+          m.pid = t;
+        };
+        img.src = src.panelMap;
+      }
       return (this.models[id] = m);
     }
     setBall(id) { this.ball = id; }
+    /** Take the ball apart (1) or put it back together (0); the panels travel there over about a second. */
+    setExplode(v) { this.explodeTo = v; }
+    /** Whether this ball can come apart into its panels (its panel map has loaded). */
+    canExplode() { const m = this._model(this.ball); return !m || !!(m && m.panels); }
     start() { if (!this.running) { this.running = true; this.last = performance.now(); requestAnimationFrame(this._loop); } }
     stop() { this.running = false; }
     _loop(now) {
       if (!this.running) return;
       const dt = Math.min(0.05, (now - this.last) / 1000); this.last = now;
+      // the explode amount follows its target as a critically damped spring (no overshoot, eases in and out)
+      { const w = 6.5, x = this.explode - this.explodeTo; this.explodeV += (-w * w * x - 2 * w * this.explodeV) * dt; this.explode += this.explodeV * dt;
+        if (Math.abs(this.explode - this.explodeTo) < 1e-4 && Math.abs(this.explodeV) < 1e-3) { this.explode = this.explodeTo; this.explodeV = 0; } }
       if (!this.drag) {
         this.vy += (this.spin - this.vy) * Math.min(1, dt * 2); this.yaw += this.vy * dt;
         // a flung ball keeps clicking as it coasts down to its idle spin
@@ -253,7 +329,7 @@
       gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST); gl.useProgram(this.pr);
       gl.uniformMatrix3fv(this.u.uR, false, mm(rotX(this.pitch), rotY(this.yaw)));
-      gl.uniform1f(this.u.uAspect, w / h); gl.uniform1f(this.u.uZoom, this.zoom);
+      gl.uniform1f(this.u.uAspect, w / h); gl.uniform1f(this.u.uZoom, this.zoom / (1 + 0.5 * Math.max(0, this.explode)));
       const model = this._model(this.ball);
       gl.uniform1i(this.u.uBall, PATTERN[this.ball] !== undefined ? PATTERN[this.ball] : 0);
       gl.uniform1i(this.u.uTex, model ? 1 : 0);
@@ -262,7 +338,33 @@
       if (nrm) { gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, model.nrm); gl.uniform1i(this.u.uNrmMap, 1); gl.activeTexture(gl.TEXTURE0); }
       gl.uniform1i(this.u.uNrmOn, nrm ? 1 : 0);
       const m = model || this.sphere;
-      gl.bindVertexArray(m.vao); gl.drawElements(gl.TRIANGLES, m.count, m.type, 0); gl.bindVertexArray(null);
+      gl.bindVertexArray(m.vao);
+      const draw = () => gl.drawElements(gl.TRIANGLES, m.count, m.type, 0);
+      const ex = Math.max(0, Math.min(1.2, this.explode));
+      const panels = model ? model.panels : this.classicPanels.map((c, id) => ({ id, c }));
+      gl.uniform1i(this.u.uPidOn, model && model.pid ? 1 : 0);
+      if (model && model.pid) { gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, model.pid); gl.uniform1i(this.u.uPid, 2); gl.activeTexture(gl.TEXTURE0); }
+      const I3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+      gl.uniformMatrix3fv(this.u.uM, false, I3);
+      gl.uniform1f(this.u.uScale, 1); gl.uniform3f(this.u.uOff, 0, 0, 0); gl.uniform1i(this.u.uCore, 0);
+      if (ex < 0.002 || !panels) { gl.uniform1i(this.u.uPanel, -1); draw(); }
+      else {
+        // the core: the dark carcass wound round the bladder, in the middle of the pieces
+        gl.uniform1i(this.u.uPanel, -1); gl.uniform1i(this.u.uCore, 1); gl.uniform1f(this.u.uScale, 0.86); draw();
+        gl.uniform1i(this.u.uCore, 0); gl.uniform1f(this.u.uScale, 1);
+        if (model && model.ground) { gl.uniform1i(this.u.uPanel, 255); draw(); }       // (a starball's printed ground)
+        // each panel lifts out along its centre; they leave one after another, a ripple round the ball
+        const n = panels.length;
+        panels.forEach((pn, k) => {
+          const s = 0.25 * k / Math.max(1, n - 1), e = Math.max(0, Math.min(1.2, (ex - s) / (1 - 0.25)));
+          // (a starball's printed ground comes off in pieces too, but only part of the way: its stars float above it)
+          const inner = model && model.inner !== undefined && pn.id >= model.inner;
+          const ee = e * e * (3 - 2 * Math.min(1, e)), d = 0.42 * ee * (inner ? 0.45 : 1);
+          gl.uniform1i(this.u.uPanel, pn.id); gl.uniform3f(this.u.uOff, pn.c[0] * d, pn.c[1] * d, pn.c[2] * d); draw();
+        });
+        gl.uniform3f(this.u.uOff, 0, 0, 0);
+      }
+      gl.bindVertexArray(null);
     }
   }
   root.FKBallView = { BallView, PATTERN };

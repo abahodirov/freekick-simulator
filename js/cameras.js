@@ -16,6 +16,27 @@
   const NAMES = ['kicker', 'follow', 'broadcast', 'top', 'goal', 'orbit', 'keeper', 'side', 'physics', 'taker'];
   const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
+  /**
+   * Eyes that move like a person's: the gaze turns toward where it wants to look at a rate that grows with the miss
+   * (smooth pursuit, a slight lag behind a fast ball) up to a limit (about 330°/s), or, for a slow look (to the scorer
+   * after a goal), gently: at most ~65°/s and easing in. g: state {d: unit vector}, mutated. Returns the gaze direction.
+   */
+  function gazeStep(g, want, dt, slow) {
+    const n = Math.hypot(want[0], want[1], want[2]) || 1, w = [want[0] / n, want[1] / n, want[2] / n];
+    if (!g.d) { g.d = w; g.rate = 0; return g.d; }
+    const cosA = clamp(g.d[0] * w[0] + g.d[1] * w[1] + g.d[2] * w[2], -1, 1), ang = Math.acos(cosA);
+    if (ang < 1e-4) { g.d = w; return g.d; }
+    // pursuit gain and top speed; a slow look builds up its speed instead of starting at full rate
+    const top = slow ? 1.15 : 5.8, gain = slow ? 1.4 : 9;
+    g.rate = slow ? Math.min(top, ang * gain, (g.rate || 0) + 2.2 * dt) : Math.min(top, ang * gain);
+    const step = Math.min(ang, g.rate * dt), t = step / ang, sa = Math.sin(ang);
+    // slerp from the current gaze toward the wanted one by `step`
+    const a = sa > 1e-6 ? Math.sin((1 - t) * ang) / sa : 1 - t, b = sa > 1e-6 ? Math.sin(t * ang) / sa : t;
+    const d = [g.d[0] * a + w[0] * b, g.d[1] * a + w[1] * b, g.d[2] * a + w[2] * b], m = Math.hypot(d[0], d[1], d[2]) || 1;
+    g.d = [d[0] / m, d[1] / m, d[2] / m];
+    return g.d;
+  }
+
   function desired(name, c) {
     const b0 = c.ball, s = c.s, d = Math.hypot(b0.x, b0.y) || 1;
     const fx = -b0.x / d, fy = -b0.y / d;
@@ -45,12 +66,22 @@
         if (!h) return { eye: [0.6, c.keeperY || 0, 1.75], target: [s[0], s[1], Math.max(0.6, s[2])], up: [0, 0, 1], fov: 0.8, k: 10 };
         // the eyes sit a little in front of the head's centre (the near plane hides the head itself)
         const eye = [h.pos[0] + h.F[0] * 0.1 + h.U[0] * 0.03, h.pos[1] + h.F[1] * 0.1 + h.U[1] * 0.03, Math.max(0.12, h.pos[2] + h.F[2] * 0.1 + h.U[2] * 0.03)];
-        // he never takes his eyes off the ball; once it is past him (in the net) he looks back out at the pitch
-        const past = s[0] < eye[0] + 0.4;
-        const target = past ? [eye[0] + 12, eye[1] * 0.5 + s[1] * 0.5, 1.0] : [s[0], s[1], Math.max(0.1, s[2])];
+        // where he wants to look: the ball, all the way into the net if it beats him; then, after a goal, a beat later
+        // his eyes go (slowly) to the scorer running off; after a save or a miss, back out to the pitch
+        const g = c.gaze || {}, dt = c.dt || 1 / 60;
+        if (c.mode !== 'live' && c.mode !== 'done') g.past = 0;
+        const past = s[0] < eye[0] + 0.3;
+        if (past || c.mode === 'done') g.past = (g.past || 0) + dt;
+        let want = [s[0], s[1], Math.max(0.1, s[2])], slow = false;
+        if (g.past > 1.1) {
+          slow = true;
+          want = c.goal && c.taker ? [c.taker.x, c.taker.y, 1.2 + Math.min(1, c.taker.z || 0) * 0.5] : [eye[0] + 14, eye[1] * 0.4, 1.1];
+        }
+        const dir = gazeStep(g, [want[0] - eye[0], want[1] - eye[1], want[2] - eye[2]], dt, slow);
+        const target = [eye[0] + dir[0] * 10, eye[1] + dir[1] * 10, eye[2] + dir[2] * 10];
         // the head's roll carries into the view during a dive, softened so it reads as a tilt, not a spin
         const up = [h.U[0] * 0.4, h.U[1] * 0.4, 0.6 + h.U[2] * 0.4];
-        return { eye, target, up, fov: 1.05, k: 22 };
+        return { eye, target, up, fov: 1.05, k: 30 };
       }
       case 'side':                            // pure elevation view: height, dip and the wall clearance
         return { eye: [mid[0], -40, 2.2], target: [mid[0], mid[1], 2.2], up: [0, 0, 1], fov: 0.5, k: 6 };
@@ -93,8 +124,10 @@
       case 'celebrate': {                     // the scorer celebrating: in front of him as he runs to the crowd
         const t = c.taker || { x: b0.x, y: b0.y, z: 1 }, d = c.celeb || { dx: -fx, dy: -fy };
         // a 3/4 view well off his line, so a sliding player never passes under the camera; lower for a slide
-        const ex = t.x + d.dx * 5.2 - d.dy * 3.6, ey = t.y + d.dy * 5.2 + d.dx * 3.6;
-        return { eye: [ex, ey, 0.9 + 0.6 * Math.min(1, t.z)], target: [t.x + d.dx * 0.6, t.y + d.dy * 0.6, Math.max(0.35, t.z * 0.9)], up: [0, 0, 1], fov: 0.62, k: 5 };
+        // (a broadcast medium shot: close enough that he fills the frame, eye level a little above his chest)
+        const fb = d.type === 'siu' ? -1 : 1;              // Siuuu: from behind the run; he turns to face us in the air
+        const ex = t.x + fb * d.dx * 4.6 - d.dy * 3.0, ey = t.y + fb * d.dy * 4.6 + d.dx * 3.0;
+        return { eye: [ex, ey, 0.75 + 0.55 * Math.min(1, t.z)], target: [t.x + d.dx * 0.4, t.y + d.dy * 0.4, Math.max(0.35, t.z * 1.05)], up: [0, 0, 1], fov: 0.5, k: 6 };
       }
       case 'portrait': {                      // head-and-shoulders close-up of the taker, from in front (#cam=portrait)
         const t = c.taker || { x: b0.x, y: b0.y, z: 1 };
@@ -134,5 +167,5 @@
       }
     }
   }
-  return { NAMES, desired };
+  return { NAMES, desired, gazeStep };
 });

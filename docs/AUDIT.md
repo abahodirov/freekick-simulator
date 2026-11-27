@@ -585,3 +585,160 @@ way) and `ball_bake.py` draws seams from the seam UV set and no longer stores th
   each ball, drawn on the pitch) and "See it up close"; the drag chart and sources under "The science". Cafusa removed.
 - **Text encoding:** `js/balls.js`, `js/people.js`, `tools/build_players.py` and `tools/mocap_build.js` had UTF-8 text
   decoded as Windows-1252 and saved again (comments and one source title showed "CarrÃ©", "â€“"); repaired run by run.
+
+## 33. Stage 36: free kicks matched to the footage, compact controls
+
+- **Exhibits:** each free kick was checked against broadcast footage (YouTube, frame by frame at 720–1080p: the main
+  camera for the spot relative to the D and the wall, reverse/behind-goal angles for the corner). Taker's left/right
+  were fixed from where the wall stood (it covers the near post) and where the keeper stood or dived. Changes:
+  Carlos 1997 from left of centre (y −3.5), off the inside of the right post; Beckham 2001 from the left (y −7.5) into
+  the top left; Ronaldo 2008 from the right (y +3.5) into the top right over the wall, keeper rooted; Juninho 2009 from
+  the left (y −9) low into the far bottom corner; Messi 2019 just left of centre (y −4.5) over the left end of the wall
+  into the top left; Pirlo 2013 just left of centre, top left; Bale 2016 near the centre, right side at head height
+  (Hart's hand); Payet 2016 from the left (y −8) dipping into the top right off the bar, keeper rooted; Ronaldinho 2002
+  unchanged (wide right, far top corner). Curl was reduced where the footage shows mostly dip (Payet) or less swing
+  (Beckham, Carlos). In the page, all nine score in their documented corner with wall and keeper in play.
+- **Controls:** dock buttons 32 px (cameras and speeds 28 px inside their groups), 16 px icons at 1.6 px stroke, 8–10 px
+  radii, Kick 34 px; rails 52 px wide. The taker camera button and key are gone (`#cam=taker` still works); the
+  exhibition's "From the taker" became "TV view".
+
+## 34. Stage 37: Carlos and Ronaldo corrected, a vision-mixer dock, celebrations that move
+
+- **Roberto Carlos 1997:** re-read from the behind-the-taker replay (the earlier reading took it for a behind-goal
+  angle). The ball sat just right of centre (y +2.5, 34 m); he aimed at the La Poste board right of the goal (his own
+  account) and it bent back right to left, glancing in off the inside of the right post just under the bar (target
+  y 3.4, z 1.75; launch line about 7 m right of the post).
+- **Ronaldo 2008:** no knuckle wobble any more: 3 rev/s of topspin puts the spin parameter (0.067) above the knuckle
+  limit (0.055), so the ball flies dead straight over the wall into the top right corner (y 3.05, z 2.25).
+- **Dock:** rebuilt as a broadcast vision mixer: flat graphite slab with 4–6 px corners, condensed uppercase type
+  (Barlow Condensed), small section captions (Screen, Camera, Replay), numbered camera feeds with a red tally light and
+  underline on the live one, a solid KICK block with a 3 px timer bar, and boxed playback speeds. Same element ids, so
+  the app code is unchanged; the illustrated look has its own light version.
+- **Celebrations:** standing gestures are held for 2.6–3 s and then released into the recorded standing; pointing to
+  the sky is straight-armed; Calma presses both palms down in front of the waist; the shaka is hands up and out at head
+  height, shaking; Can't-hear-you pumps the free arm; the knee slide roars with arms wide and then pumps the fists;
+  the Siuuu is filmed from behind the run, so the half-turn in the air brings him round to face the camera, and after
+  holding the landing he relaxes into standing. The penguin slide's belly is now on the grass (pelvis 0.09 m): at the
+  default sunset light even 10 cm of air threw a shadow half a metre away, which read as floating. The celebration
+  camera is a closer medium shot (4.6 m, fov 0.5).
+
+## 35. Stage 38: two new balls, a floating control bar, tabs that show the panels
+
+- **Fussballliebe (Euro 2024):** glTF whose single primitive is a triangle strip (mode 5), which `tools/ball_model.js`
+  now unrolls (alternating winding, degenerate stitching triangles dropped; fans too). Baked with `ball_bake.py
+  --sphere-only` at 2048 × 1024: the normal map's axes were picked by the curl test (x+1 y-1: curl/div 0.58 vs 0.83),
+  so the panel seams and the raised and pressed-in rings light correctly.
+- **Champions League ball:** the OBJ holds two identical balls side by side, each a 96 × 120 UV sphere with no relief;
+  one was split out and baked. New `tools/ball_relief.py` finds the white star panels in the sphere map (print inside a
+  panel, found as small coloured regions the ground does not reach, counts as panel), opens the mask to drop specks,
+  draws a Gaussian groove (width 2.2 px, depth 0.6 % of the radius) along every panel edge, shades it, and writes the
+  object-space normals of that height field. A Europa League and a 2022 World Cup mark inside two stars were painted
+  out (`--clear`).
+- Both join the ball list (engine drag model: no wind-tunnel data published), the showcase (with facts) and the Ball
+  lab; a test checks every manifest ball has a sphere map and a groove map.
+- **Tabs:** opening any section (and clicking Play) calls `FKApp.setPanels(true)`, so hidden panels come back.
+- **Control bar** (`js/dock.js`): the vision mixer is replaced by a floating capsule of 34 px icon buttons with
+  tooltips (name and key, on the side away from the edge). A grip drags it; it is clamped to the window; let go within
+  72 px of an edge and it snaps there (top/bottom: a row placed along the edge; left/right: a column 84 px in, clear of
+  the rails), otherwise it stays where it was dropped; double-click the grip or press Home on it to reset; arrow keys
+  move it while the grip has focus. It folds to grip + Kick + chevron (B). A scrub strip shows the last kick's time
+  and seeks it (paused) when dragged, through the celebration (flight + 2.6 s). Position and fold are remembered.
+
+## 36. Stage 39: keeper's eyes and body, Kroos v Sweden, balls that fly their own way, the ball as a map
+
+- **Removed:** the dock's scrub strip and dragging (the dock is fixed at the bottom centre; it still folds, B), the
+  background crowd murmur, "(incl. Zidane)" on the Carlos wall label.
+- **Panels step aside:** `body.kick-focus` from 2.5 s before the strike until 1.5 s after the flight ends; the rails
+  and open drawers (and the Free kicks / Ball lab drawer, except while the Anatomy story runs) slide to their own side
+  over 0.7 s (ease in-out). The live readout stays.
+- **Keeper's eyes** (`FKCam.gazeStep`): the keeper camera's gaze is a direction that turns toward its target at a rate
+  proportional to the miss (gain 9 /s) up to 5.8 rad/s (smooth pursuit: a slight lag behind a fast ball), or, for a
+  slow look, with gain 1.4 /s, a 1.15 rad/s cap and a ramp-up. It follows the ball into the net; 1.1 s after the ball is
+  past him (or the shot is over) it turns to the scorer after a goal, back out to the pitch otherwise. Tested: no snap,
+  ends on the scorer, never faster than ~70°/s on the slow look.
+- **Keeper's body:** waiting is two slow unrelated sways and bobs instead of a 1.2 Hz bounce; a split-step hop lands as
+  the ball is struck (`toStrike` from the run-up); the power step is kept through the flight (it vanished at take-off:
+  a 13 cm ankle jump in one frame); every joint follows its pose through a closed-form critically damped spring
+  (45 ms; hands only while leaving the set position, exact once reaching or near the ball). Peak joint acceleration in
+  a dive fell from 534 to about 250 m/s² (60 fps probe); the glove test still holds the hands on the physics point.
+- **Takers:** Koeman, Mihajlović and Nakamura removed; Toni Kroos added (right foot, placed curler, Germany 2018 kit)
+  and Marco Reus as a support character (not in the picker). The player build appends both and still builds the
+  three removed players (skipped at output) so every other model is byte-identical.
+- **Kroos v Sweden 2018** (FIFA and DFB reports): from 26 m at a tight angle on the left (15, −20.8). A lay-off
+  (`recon.layoff`, `FKApp.layoff`): the ball starts 1.1 m to the taker's left, rolls across with a slowing roll as he
+  gets ready, Reus (`FKPeople.supportBody`: the recorded standing, right sole brought onto the ball by IK) stops it and
+  steps away 0.5 s before the strike. The distance is not in the reports (marked so).
+- **Ball physics** (`js/balls.js`): Trionda: critical Re 1.777 × 10⁵, supercritical Cd 0.22 (measured), knuckle
+  slightly stronger and faster than the default (model values set to its measured fluctuation ranking). Fussballliebe:
+  the Al Rihla's critical Re 1.927 × 10⁵ and the weakest knuckle (Al Rihla had the smallest unsteady forces), marked
+  as a proxy. Champions League ball: no data, flies like the Classic (said so). Same 30 m/s no-spin kick: Trionda
+  crosses 26 cm lower and 0.04 s later than the Classic; the Fussballliebe wobbles least.
+- **Showcase as a map:** callouts in two columns with SVG leader lines to the ball's edge; a fact opens a picture
+  (`assets/showcase/<ball>.jpg`, rendered in the game from the paused orbit camera, now `FKApp.inspect`) and its
+  story. **Anatomy:** `BallView.setExplode` takes the ball apart: each panel is the sphere drawn again with only its
+  panel's fragments kept (`panelMap` texture, or the classic's 32 centres), pushed out along its centre with a ripple
+  of start times, the undersides shaded as foam and a wound carcass drawn inside; the zoom eases out to keep the
+  pieces in frame. Panel maps (`tools/ball_panels.py`): texture islands of the Trionda (4) and Fussballliebe (20: 12 +
+  8 triangles) models; the starball's stars from its grooves (20, ground stays); the Jabulani from its ring graphics
+  on a cube's corners (8, approximate).
+
+## 37. Stage 40: Payet re-struck, glass and aurora, a ball that comes apart cleanly
+
+- **Payet 2016:** the strike set by eye against the broadcast in the shot panel (103 km/h, 16.2° right, 24.8° up,
+  10.6 rev/s curl, 10 rev/s topspin) hit the bar and stayed out in every seed; at 24.7° it goes in off the underside of
+  the bar in 8 of 8, as the real one did. Recreations can now store their aim directly (`recon.aim`), used by the
+  loader and the tests in place of solving for a target.
+- **Jabulani inside out (fixed):** the viewer decided a panel's back from the triangle winding, which is opposite in
+  the generated sphere and in the Jabulani's own mesh, so its outside was drawn as foam. It now uses the geometry (the
+  normal against the direction to the camera), right for any mesh.
+- **Anatomy:** no core in the middle; the panels travel 0.85 ball radii (was 0.52) and the zoom eases out to match.
+  The way back is a round U-turn arrow that spins in (no text).
+- **Map:** the facts are frosted-glass pills (backdrop blur and saturation, a top highlight) in two bowed columns; on
+  a change the old pills drift out and the new ones float in with an expo ease and a blur that clears. The leader
+  lines are redrawn every frame from the ball's current size on screen (its explode and zoom), so they stay attached
+  while it comes apart, and each draws itself in after its pill. The tabs, buttons and picture panel are glass too.
+- **Aurora:** four large blurred light blobs behind the card drift on unrelated 23–37 s loops (screen-blended, with a
+  vignette for legibility); their colours are registered CSS properties, so they glide to the next ball's palette
+  (Trionda red/green/blue/gold, Fussballliebe gold/red/blue/green, starball orange/yellow/red/purple, Jabulani
+  yellow/green/blue/red, Classic greys and blue). Still with prefers-reduced-motion.
+
+## 38. Stage 41: living backgrounds, real photographs, panels as built
+
+- **Backgrounds** (`js/backdrop.js`): React Bits' Aurora (amplitude 1.55, blend 0.5, height 0.64, glow 0.6, 2 layers)
+  and Plasma (speed 0.25, scale 0.9, twist 0.55, softness 0.45, wave 0.65, grain 0.03, fade 0.3), their shaders
+  unchanged, run in plain WebGL2 behind the card. Aurora for the Trionda, Fussballliebe and Jabulani in their colours,
+  Plasma for the starball (orange) and the Classic (lilac grey); switching crossfades the two and glides the colours;
+  both follow the pointer as in the originals. Drawn at 1× pixel density, Plasma's volume at half resolution.
+- **Anatomy:** the dark core is back (darker), the panels travel 0.42 radii (was 0.85), the callout lines are straight
+  (a level run, then one straight leg to a ringed point). Every ball's maps preload when the showcase opens: the
+  starball's stars stayed on if Anatomy was clicked before its panel map had loaded.
+- **Jabulani panels** rebuilt as adidas's cutaway shows them: 4 triangle panels, each out to the outer edge of its
+  coloured graphic (a radius per direction, 97th percentile of the graphic, smoothed, + 2.5°), and 4 tripods sharing
+  the rest by the nearest opposite corner.
+- **Trionda's sensor:** under one panel a small board (green edge, gold traces, a cyan light) and, under the other
+  three, round counterweights; they come out with their panels (the sensor's panel opens 1.9× wider so it shows).
+  Drawn as flattened, turned spheres (a shape matrix in the viewer's vertex shader, normals by its inverse transpose).
+- **Texture:** every ball's skin has a coarser pebble under the fine grain and a faint speckle; the models' relief is
+  drawn 30 % deeper.
+- **Photographs:** the fact pictures are real photographs from Wikimedia Commons (free licences), loaded from Commons
+  and credited under each; the in-game renders are removed. No suitable free photo of a Euro 2024 or 2026 match action
+  with the ball was found, so those balls show the ball itself (the Trionda also on the pitch at France v Senegal).
+
+## 39. Stage 42: back to the cube Jabulani, a starball that comes apart, a calmer ball, Ronaldo's knuckleball
+
+- **Trionda:** the drawn sensor and counterweights are removed (the sensor fact shows a photograph of the real module).
+- **Jabulani:** the panel map is the earlier one again (8 panels on a cube's corners); the tripod/triangle rebuild
+  is withdrawn.
+- **Starball:** its printed ground is split into 20 pieces, one under each star (nearest star centre); the ground
+  pieces lift 0.45 as far as the stars, so the stars float out over them and the dark core shows in the middle.
+- **Backgrounds:** the Classic now has an Aurora (silver, steel blue, navy); the starball keeps the Plasma.
+- **Anatomy** shows three short lines at most and hides the hint and the play button.
+- **Close:** everything but the ball dissolves (blur and fade), the ball spins up and flies home to the logo over
+  0.78 s on an overshooting curve, and the logo pops as it lands; the box closes after 0.94 s.
+- **Sound:** turning the ball (or aiming) by hand is a soft low-passed rush of air with a quiet sine that rises with the
+  speed, easing in and out; the click every 11° is gone.
+- **Photographs:** every fact has its own (20 from Wikimedia Commons, none used twice, checked by the build script;
+  one supplied by the owner).
+- **Ronaldo 2008:** a knuckleball now (0.15 rev/s topspin, 27.5 m/s, aimed at 2.85 m, 2.15 m): with no spin it wobbles
+  (about 0.3 m at the line) and dips through its drag crisis into the top right corner; 17 of 30 keeper reads score
+  cleanly and the exhibition picks one. At the old 31 m/s with no topspin it hit the wall almost every time.

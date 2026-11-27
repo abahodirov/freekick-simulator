@@ -175,12 +175,17 @@
    * k: the physics keeper (centre of mass cy,cz; body angle theta; ankles fy,fz; gloves hy,hz) at x = k.x.
    * The body plane is the goal plane; the keeper faces +x (up the pitch).
    */
-  function keeperBody(k, clock = 0, ball = null) {
+  function keeperBody(k, clock = 0, ball = null, opts = {}) {
     const st = Math.sin(k.theta), ct = Math.cos(k.theta);
     const U = [0, st, ct], F = [1, 0, 0], Rt = norm(cross(F, U));
-    // on his toes while waiting: a small bounce and a side-to-side sway (visual only; the physics body is unchanged)
+    // waiting: light on his feet, the weight drifting from foot to foot at no fixed beat (two slow, unrelated
+    // rhythms instead of a metronome bounce); visual only, the physics body is unchanged
     const waiting = k.state === 'ready' || k.state === 'watching';
-    const bob = waiting ? 0.012 * Math.sin(clock * 7.5) : 0, sway = waiting ? 0.035 * Math.sin(clock * 1.9) : 0;
+    let bob = waiting ? 0.006 * Math.sin(clock * 2.3) + 0.004 * Math.sin(clock * 5.3 + 1.1) : 0;
+    const sway = waiting ? 0.026 * Math.sin(clock * 0.85) + 0.011 * Math.sin(clock * 2.05 + 0.7) : 0;
+    // the split step: a small hop timed to land as the ball is struck, so he is loaded and balanced to push either way
+    const toS = opts.toStrike, hop = toS !== undefined && toS < 0.34 && toS > 0 ? Math.sin(Math.PI * (1 - toS / 0.34)) : 0;
+    bob += 0.045 * hop;
     const C = [k.x, k.cy + sway, k.cz + bob];
     const height = 1.88, kk = height / 1.8;
     let pelvis = add(C, mul(U, -0.1));
@@ -202,7 +207,7 @@
     const gwT = setPos ? 0 : 1;
     let vis = k._vis;
     if (!vis || T < vis.t - 1e-9) vis = k._vis = { t: T, lean: leanT, gw: gwT };
-    const av = 1 - Math.exp(-Math.min(0.1, T - vis.t) * 11);
+    const av = 1 - Math.exp(-Math.min(0.1, T - vis.t) * 8);
     vis.lean += (leanT - vis.lean) * av; vis.gw += (gwT - vis.gw) * av; vis.t = T;
     const lean = vis.lean, gw = vis.gw;
     // the set position is a real crouch: hips ~10 cm lower, knees bent, weight forward (visual only), easing out as
@@ -228,11 +233,11 @@
       const spread = ready ? 0.2 : 0.13;
       const ph = shufPh + s * Math.PI / 2;
       const ground = comb([k.x + 0.03, k.fy, k.fz], s * spread, Rt, 0.06, F, 0, U);
-      ground[1] += 0.07 * Math.sin(ph) * onFeet; ground[2] += 0.05 * Math.max(0, Math.cos(ph)) * shufA;
+      ground[1] += 0.07 * Math.sin(ph) * onFeet; ground[2] += 0.05 * Math.max(0, Math.cos(ph)) * shufA + 0.04 * hop;
       // the power step: as he pushes off, the dive-side foot steps toward the ball first (keepers never take off
       // from both feet planted side by side)
-      if (k.state === 'push' && s * ds < 0) {
-        const st0 = k.tPushEnd - push, pw = smooth(st0, st0 + push * 0.6, T);
+      if ((k.state === 'push' || k.state === 'air') && s * ds < 0) {
+        const st0 = k.tPushEnd - push, pw = k.state === 'air' ? 1 : smooth(st0, st0 + push * 0.6, T);
         ground[1] += ds * 0.22 * pw; ground[2] += 0.05 * Math.sin(Math.PI * pw);
       }
       // in the air: the lower (dive-side) leg trails nearly straight, the top leg is tucked with the knee driven
@@ -296,6 +301,47 @@
       const hU = norm(sub(Uu, mul(d, dot(Uu, d))));
       body.H = { F: d, U: hU, w: 0.75 };
     }
+    // (time: the keeper's own clock once the shot is live, the animation clock while he waits)
+    return smoothKeeper(k, body, (k.clock || 0) > 0 ? k.clock : clock, ball, gw);
+  }
+  /**
+   * A real body has mass: each joint follows its pose through a critically damped spring (~45 ms), so state changes
+   * (set → push → air → down) flow instead of snapping. The hands are eased only as they leave the set position, and
+   * follow exactly once reaching or near the ball (the gloves must be where the physics says). State lives on the
+   * keeper object and is reset when time runs backwards or jumps.
+   */
+  function smoothKeeper(k, body, clock, ball, gw) {
+    const pts = [['pelvis', body, 'pelvis'], ['neck', body, 'neck'], ['head', body, 'head']];
+    for (const s of ['L', 'R']) {
+      for (const j of ['hip', 'knee', 'ankle', 'toe']) pts.push([s + j, body.legs[s], j]);
+      for (const j of ['sh', 'elbow', 'hand']) pts.push([s + j, body.arms[s], j]);
+    }
+    let sm = k._sm;
+    const dt = sm ? clock - sm.t : 0;
+    if (!sm || dt < 0 || dt > 0.25) {
+      sm = k._sm = { t: clock, p: {} };
+      for (const [n, o, j] of pts) sm.p[n] = { x: o[j].slice(), v: [0, 0, 0] };
+      return body;
+    }
+    sm.t = clock;
+    if (dt === 0) { for (const [n, o, j] of pts) o[j] = sm.p[n].x.slice(); return body; }
+    for (const [n, o, j] of pts) {
+      // the hands are eased only while they leave the set position; once reaching they are exactly on the physics
+      // glove point (and always when the ball is near)
+      let tau = n.endsWith('hand') || n.endsWith('elbow') ? 0.04 * (1 - gw) : n === 'head' || n === 'neck' ? 0.05 : 0.045;
+      if (ball && n.endsWith('hand')) tau *= clamp((Math.hypot(o[j][0] - ball[0], o[j][1] - ball[1], o[j][2] - ball[2]) - 0.3) / 0.7, 0, 1);
+      const st = sm.p[n], tgt = o[j];
+      if (tau < 0.004) { st.x = tgt.slice(); st.v = [0, 0, 0]; continue; }
+      // closed-form critically damped step (stable for any time step)
+      const w = 2 / tau, x = w * dt, ex = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+      for (let c = 0; c < 3; c++) {
+        const ch = st.x[c] - tgt[c], tmp = (st.v[c] + w * ch) * dt;
+        st.v[c] = (st.v[c] - w * tmp) * ex;
+        st.x[c] = tgt[c] + (ch + tmp) * ex;
+      }
+      o[j] = st.x.slice();
+      if (o[j][2] < 0.02) o[j][2] = 0.02;
+    }
     return body;
   }
 
@@ -341,21 +387,6 @@
       kit: { shirt: [0.98, 0.84, 0.10], shirt2: [0.1, 0.45, 0.25], pattern: 0, shorts: [0.10, 0.30, 0.65], socks: [0.96, 0.96, 0.96], number: 11 },
       boots: [0.96, 0.96, 0.96], run: { steps: 4, angle: 30, speed: 2.6 },
       kick: { speed: 23, side: -3, top: 2, ty: -3.0, tz: 2.1, label: 'Floated', note: 'A high, slower ball that drops late behind a keeper who is off his line' } },
-    { id: 'koeman', name: 'Ronald Koeman', short: 'Koeman', foot: 'right', height: 1.78, build: 0.95,
-      skin: [0.9, 0.72, 0.6], hair: [0.7, 0.56, 0.32], hairStyle: 'short', beard: false,
-      kit: { shirt: [0.95, 0.5, 0.12], shirt2: [0.95, 0.5, 0.12], pattern: 0, shorts: [0.95, 0.95, 0.95], socks: [0.95, 0.5, 0.12], number: 4 },
-      boots: [0.08, 0.08, 0.09], run: { steps: 6, angle: 10, speed: 3.6 },
-      kick: { speed: 33, side: -1.5, top: -0.5, ty: 2.6, tz: 0.6, label: 'Driven', note: 'Laces, power, little curl: speed takes time away from the keeper' } },
-    { id: 'mihajlovic', name: 'Siniša Mihajlović', short: 'Mihajlović', foot: 'left', height: 1.85, build: 0.95,
-      skin: [0.88, 0.7, 0.58], hair: [0.12, 0.1, 0.08], hairStyle: 'buzz', beard: false,
-      kit: { shirt: [0.55, 0.78, 0.92], shirt2: [0.55, 0.78, 0.92], pattern: 0, shorts: [0.96, 0.96, 0.96], socks: [0.55, 0.78, 0.92], number: 11 },
-      boots: [0.08, 0.08, 0.09], run: { steps: 5, angle: 20, speed: 3.4 },
-      kick: { speed: 31, side: 7, top: 1.5, ty: 3.0, tz: 1.9, label: 'Power curler', note: 'Left foot, hit hard with curl: power and bend together' } },
-    { id: 'nakamura', name: 'Shunsuke Nakamura', short: 'Nakamura', foot: 'left', height: 1.78, build: 0.84,
-      skin: [0.9, 0.76, 0.62], hair: [0.1, 0.08, 0.07], hairStyle: 'long', beard: false,
-      kit: { shirt: [0.1, 0.55, 0.28], shirt2: [0.96, 0.96, 0.96], pattern: 2, shorts: [0.96, 0.96, 0.96], socks: [0.96, 0.96, 0.96], number: 25 },
-      boots: [0.08, 0.08, 0.09], run: { steps: 4, angle: 30, speed: 2.4 },
-      kick: { speed: 25, side: 9, top: 2, ty: 3.05, tz: 2.05, label: 'Placed curler', note: 'Spin and placement rather than power' } },
     { id: 'bale', name: 'Gareth Bale', short: 'Bale', foot: 'left', height: 1.85, build: 0.93,
       skin: [0.9, 0.73, 0.6], hair: [0.3, 0.2, 0.12], hairStyle: 'bun', beard: true,
       kit: { shirt: [0.78, 0.08, 0.12], shirt2: [0.78, 0.08, 0.12], pattern: 0, shorts: [0.78, 0.08, 0.12], socks: [0.78, 0.08, 0.12], number: 11 },
@@ -366,6 +397,17 @@
       kit: { shirt: [0.48, 0.10, 0.20], shirt2: [0.48, 0.10, 0.20], sleeves: [0.47, 0.74, 0.92], pattern: 0, trim: [0.47, 0.74, 0.92], shorts: [0.96, 0.96, 0.96], socks: [0.48, 0.10, 0.20], number: 27 },
       boots: [0.95, 0.95, 0.95], run: { steps: 4, angle: 32, speed: 2.7 },
       kick: { speed: 26, side: -8, top: 3, ty: -3.0, tz: 2.15, label: 'Whipped curler', note: 'Right foot, inside of the boot: whipped up over the wall and dipping into the far top corner' } },
+    { id: 'kroos', name: 'Toni Kroos', short: 'Kroos', foot: 'right', height: 1.83, build: 0.86,
+      skin: [0.90, 0.73, 0.61], hair: [0.40, 0.29, 0.17], hairStyle: 'short', beard: false,   // short, side-parted, light brown (2018)
+      kit: { shirt: [0.96, 0.96, 0.96], shirt2: [0.96, 0.96, 0.96], pattern: 0, trim: [0.08, 0.08, 0.09], shorts: [0.08, 0.08, 0.09], socks: [0.96, 0.96, 0.96], number: 8 },
+      boots: [0.95, 0.95, 0.95], run: { steps: 3, angle: 28, speed: 2.4 },
+      kick: { speed: 25, side: -6, top: 3, ty: -3.0, tz: 2.1, label: 'Placed curler', note: 'Right instep, a short run and a smooth swing: precision and curl rather than power' } },
+    // Marco Reus stands next to the ball and stops Kroos's lay-off (the Sweden free kick); he is not a taker himself
+    { id: 'reus', name: 'Marco Reus', short: 'Reus', foot: 'right', height: 1.80, build: 0.86, support: true,
+      skin: [0.90, 0.74, 0.62], hair: [0.36, 0.27, 0.16], hairStyle: 'short', beard: true,   // swept-up dark blond hair, stubble
+      kit: { shirt: [0.96, 0.96, 0.96], shirt2: [0.96, 0.96, 0.96], pattern: 0, trim: [0.08, 0.08, 0.09], shorts: [0.08, 0.08, 0.09], socks: [0.96, 0.96, 0.96], number: 11 },
+      boots: [0.95, 0.85, 0.2], run: { steps: 3, angle: 20, speed: 2.4 },
+      kick: { speed: 28, side: -4, top: 2, ty: -2.9, tz: 1.9, label: 'Curler', note: 'Right foot, curled' } },
   ];
   const CHAR_BY_ID = Object.fromEntries(CHARACTERS.map((c) => [c.id, c]));
 
@@ -975,7 +1017,7 @@
   // ───────────── goal celebrations ─────────────
   /** Each taker's celebration after a goal. */
   const CELEB_OF = { ronaldo: 'siu', messi: 'pointUp', carlos: 'kneeSlide', beckham: 'cantHear', pirlo: 'kalma', juninho: 'pointUp',
-    ronaldinho: 'shaka', koeman: 'kneeSlide', mihajlovic: 'cantHear', nakamura: 'penguin', bale: 'penguin', payet: 'kneeSlide' };
+    ronaldinho: 'shaka', bale: 'penguin', payet: 'kneeSlide', kroos: 'cantHear', reus: 'pointUp' };
   const CELEB_NAMES = { siu: 'Siuuu', pointUp: 'Pointing to the sky', kneeSlide: 'Knee slide', cantHear: "Can't hear you",
     kalma: 'Calma', shaka: 'Shaka', penguin: 'Penguin slide' };
 
@@ -1014,22 +1056,23 @@
       // pull up and stand (recorded standing), facing the crowd, then the gesture
       J = mixPose(J, pl.idleAt(clock, root, D), smooth(TR - 0.4, TR + 0.1, u));
       b = bodyFromPose(J, hd);
-      const gw = smooth(TR - 0.25, TR + 0.35, u), g = u - TR;
+      const HOLD = { pointUp: 2.6, kalma: 3.0, shaka: 2.8, cantHear: 2.8 }[type] || 2.6;
+      const gw = smooth(TR - 0.25, TR + 0.35, u) * (1 - smooth(TR + HOLD, TR + HOLD + 0.8, u)), g = u - TR;
       if (gw > 0) {
         const F = b.F, Rt = b.Rt, U = b.U;
         for (const [sd, s] of [['L', -1], ['R', 1]]) {
           const a = b.arms[sd], sh = a.sh;
           let tgt, pole;
           if (type === 'pointUp') {           // both arms straight up, fingers to the sky
-            tgt = comb(sh, 0.53 * k, U, 0.1 * k, F, s * 0.05 * k, Rt); pole = comb([0, 0, 0], s, Rt, -0.3, F, 0, U);
+            tgt = comb(sh, (0.545 + 0.02 * Math.sin(2 * Math.PI * 0.7 * g)) * k, U, 0.08 * k, F, s * 0.09 * k, Rt); pole = comb([0, 0, 0], s, Rt, -0.3, F, 0, U);
           } else if (type === 'kalma') {      // palms pressing down in front: calm down
-            tgt = comb(sh, -0.36 * k + 0.07 * k * Math.sin(2 * Math.PI * 1.2 * g), U, 0.42 * k, F, s * 0.1 * k, Rt); pole = comb([0, 0, 0], s, Rt, -0.4, F, -0.3, U);
+            tgt = comb(sh, (-0.3 + 0.08 * Math.sin(2 * Math.PI * 0.85 * g)) * k, U, 0.42 * k, F, s * 0.17 * k, Rt); pole = comb([0, 0, 0], s * 0.6, Rt, -0.2, F, -1, U);
           } else if (type === 'shaka') {      // hands up in front of the face, shaking the shaka
-            tgt = comb(sh, 0.12 * k + 0.03 * k * Math.sin(15 * g + s), U, 0.4 * k, F, (-s * 0.04 + 0.05 * Math.sin(17 * g)) * k, Rt); pole = comb([0, 0, 0], s, Rt, -0.8, U, 0, U);
+            tgt = comb(sh, (0.14 + 0.035 * Math.sin(2 * Math.PI * 2.1 * g + s)) * k, U, 0.2 * k, F, s * (0.27 + 0.03 * Math.sin(19 * g)) * k, Rt); pole = comb([0, 0, 0], s, Rt, -0.75, U, -0.2, F);
           } else {                            // can't hear you: kicking-side hand cupped to the ear, the other arm out wide
             const ear = s === pl.m;
             if (ear) { tgt = comb(b.head, s * 0.12 * k, Rt, -0.03 * k, F, -0.03 * k, U); pole = comb([0, 0, 0], s, Rt, -0.5, U, 0, U); }
-            else { tgt = comb(sh, s * 0.5 * k, Rt, 0.1 * k, F, -0.12 * k, U); pole = comb([0, 0, 0], -1, U, -0.3, F, 0, U); }
+            else { tgt = comb(sh, s * 0.47 * k, Rt, 0.12 * k, F, (0.1 + 0.12 * Math.max(0, Math.sin(2 * Math.PI * 1.3 * g))) * k, U); pole = comb([0, 0, 0], -1, U, -0.3, F, 0, U); }
           }
           armTo(b, sd, lerpArr(a.hand, tgt, gw), pole);
         }
@@ -1052,16 +1095,20 @@
       const land = forward(o, Fh, ch.height, { lean: -0.14, drop: 0.1, ground: 0, head: { pitch: -0.3, w: 0.9 },
         L: { hip: 0.05, abd: 0.32, knee: 0.35 }, R: { hip: 0.05, abd: 0.32, knee: 0.35 }, aL: { flex: -0.1, abd: 0.6, elbow: 0.05 }, aR: { flex: -0.1, abd: 0.6, elbow: 0.05 } });
       body2 = blendBody(air, land, smooth(0.82, 1.0, s));
+      const rel = smooth(2.0, 2.8, g);
+      if (rel > 0) body2 = blendBody(body2, bodyFromPose(pl.idleAt(clock, o, Fh), hd), rel);
     } else {
       // slides: the run carries on into the slide, which loses its speed on the grass
       const Ts = type === 'penguin' ? 1.1 : 0.95;
       const x = g < Ts ? vmax * (g - g * g / (2 * Ts)) : vmax * Ts / 2;
       const o = add(root, mul(D, x)), still = smooth(Ts * 0.8, Ts + 0.3, g);
       if (type === 'kneeSlide') {
-        // on the knees, leaning back, arms flung wide, roaring at the crowd
+        // on the knees, leaning back, arms flung wide, roaring at the crowd; once stopped, the fists pump
+        const pg = Math.max(0, g - Ts - 0.5), pump = still * Math.max(0, Math.sin(2 * Math.PI * 1.25 * pg)) * (pg > 0 ? 1 : 0);
+        const pumpR = still * Math.max(0, Math.sin(2 * Math.PI * 1.25 * pg + 0.5)) * (pg > 0 ? 1 : 0);
         body2 = forward(o, D, ch.height, { lean: -0.35 - 0.15 * still, drop: 0.463 * k - 0.08, head: { pitch: -0.35, w: 0.9 },
           L: { hip: 0.12, knee: 1.7, abd: 0.14, pitch: Math.PI + 0.15 }, R: { hip: 0.12, knee: 1.7, abd: 0.14, pitch: Math.PI + 0.15 },
-          aL: { flex: 0.5 + 0.4 * still, abd: 1.25, elbow: 0.4 + 0.9 * still }, aR: { flex: 0.5 + 0.4 * still, abd: 1.25, elbow: 0.4 + 0.9 * still } });
+          aL: { flex: 0.55 + 0.45 * still, abd: 1.2, elbow: 0.3 + 1.35 * pump }, aR: { flex: 0.55 + 0.45 * still, abd: 1.2, elbow: 0.3 + 1.35 * pumpR } });
       } else {
         // penguin: flat on the belly, arms tight along the sides, feet flicking up behind
         const kick = 0.3 * Math.max(0, Math.sin(6 * g)) * still;
@@ -1076,6 +1123,10 @@
     let low = Infinity;
     for (const s of ['L', 'R']) low = Math.min(low, b.legs[s].knee[2], b.legs[s].ankle[2], b.legs[s].toe[2], b.arms[s].hand[2]);
     if (low < 0.03) shiftBody(b, 0.03 - low);
+    if (type === 'penguin') {
+      const lie = smooth(TR + 0.05, TR + 0.35, u);
+      if (lie > 0) shiftBody(b, lie * Math.max(0.09 - b.pelvis[2], -0.06 - low));
+    }
     return Object.assign(b, { celebDir: D, celeb: type });
   }
 
@@ -1083,6 +1134,27 @@
    * The taker at time t (s from the strike), from motion capture; falls back to the procedural model without it.
    * celeb: { tGoal } after a goal (t of the goal) — he celebrates once his follow-through is done.
    */
+  /**
+   * A team-mate at the free kick (Reus beside Kroos): the recorded standing at O, facing X, on his own proportions.
+   * sole = { p: ball centre, w: 0..1 } brings his right foot up onto the top of the ball to stop it (the sole on the
+   * ball, toes forward and down), as a player traps a rolled lay-off.
+   */
+  function supportBody(ch, clock, O, X, sole) {
+    const Xn = norm([X[0], X[1], 0]);
+    const pl = mocapPlan(ch, { x: O[0] + Xn[0] * 3, y: O[1] + Xn[1] * 3 }, Xn);
+    const b = bodyFromPose(pl.idleAt(clock, O, Xn), ch);
+    if (sole && sole.w > 0) {
+      const k = ch.height / 1.8, leg = b.legs.R, up = [0, 0, 1];
+      const onTop = [sole.p[0] - Xn[0] * 0.07, sole.p[1] - Xn[1] * 0.07, sole.p[2] + 0.1 + DIM.ankle * k * 0.5];
+      const ank = lerp3(leg.ankle, onTop, sole.w);
+      const r = ik2(leg.hip, ank, DIM.thigh * k, DIM.shin * k, add(Xn, mul(up, 0.3)));
+      const toeD = norm(lerp3(norm(sub(leg.toe, leg.ankle)), norm([Xn[0], Xn[1], -0.45]), sole.w));
+      b.legs.R = { hip: leg.hip, knee: r.mid, ankle: r.end, toe: add(r.end, mul(toeD, DIM.foot * k)) };
+      // a little weight onto the standing leg, arms out for balance
+      b.pelvis = add(b.pelvis, mul(cross(Xn, up), -0.03 * sole.w));
+    }
+    return b;
+  }
   function kickerBody(ch, t, ball, aim, clock = 0, celeb = null) {
     if (!MOCAP) return kickerBodyProc(ch, t, ball, aim, clock);
     const pl = mocapPlan(ch, ball, aim);
@@ -1127,5 +1199,5 @@
   }
 
   void kickerBodyKeyframed;
-  return { CHARACTERS, CHAR_BY_ID, DIM, forward, ik2, wallBody, keeperBody, kickerBody, kickerBodyProc, runTime, norm, cross, MOCAP, CELEB_OF, CELEB_NAMES };
+  return { CHARACTERS, CHAR_BY_ID, DIM, forward, ik2, wallBody, keeperBody, kickerBody, supportBody, kickerBodyProc, runTime, norm, cross, MOCAP, CELEB_OF, CELEB_NAMES };
 });

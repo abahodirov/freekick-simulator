@@ -63,8 +63,18 @@ function loadGltf(json, bin, dir) {
       // --seam-uv M keeps another set, whose islands are the real panel cuts, for drawing seams (ball_bake.py)
       const uvKey = 'TEXCOORD_' + (opt.uv || 0), seamKey = opt['seam-uv'] !== undefined ? 'TEXCOORD_' + opt['seam-uv'] : null;
       const base = out.positions.length / 3;
-      addPrim(acc(at.POSITION), at.NORMAL !== undefined ? acc(at.NORMAL) : null, at[uvKey] !== undefined ? acc(at[uvKey]) : null,
-        pr.indices !== undefined ? acc(pr.indices) : null, M);
+      // triangle strips (mode 5, as models saved from web viewers often are) and fans (mode 6) become plain triangles
+      let ind = pr.indices !== undefined ? acc(pr.indices) : null;
+      const mode = pr.mode === undefined ? 4 : pr.mode;
+      if (mode === 5 || mode === 6) {
+        const src = ind || [...Array(json.accessors[at.POSITION].count).keys()], tri = [];
+        for (let i = 0; i + 2 < src.length; i++) {
+          const t = mode === 6 ? [src[0], src[i + 1], src[i + 2]] : i % 2 ? [src[i + 1], src[i], src[i + 2]] : [src[i], src[i + 1], src[i + 2]];
+          if (t[0] !== t[1] && t[1] !== t[2] && t[0] !== t[2]) tri.push(...t);           // (strips stitch with degenerates)
+        }
+        ind = tri;
+      } else if (mode !== 4) throw new Error('unsupported primitive mode ' + mode);
+      addPrim(acc(at.POSITION), at.NORMAL !== undefined ? acc(at.NORMAL) : null, at[uvKey] !== undefined ? acc(at[uvKey]) : null, ind, M);
       if (seamKey && at[seamKey] !== undefined) {
         out.seamUvs = out.seamUvs || [];
         while (out.seamUvs.length < base * 2) out.seamUvs.push(0);

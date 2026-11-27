@@ -515,3 +515,297 @@ details.science { margin: 16px 0 6px; border-top: 1px solid var(--grid); padding
 details.science > summary { cursor: pointer; font-size: 12px; color: var(--muted); list-style: none; }
 details.science > summary::before { content: '▸ '; }
 details.science[open] > summary::before { content: '▾ '; }
+
+
+/* ───────────── stage 36: compact controls ─────────────
+   One control height (32 px) everywhere in the dock, icon + short word for every button (no mixing of icon-only and
+   text-only), thin 1.6 px icons at 16 px, 8–10 px radii, and the Kick button as the single prominent action. */
+#bottom { gap: 2px; padding: 4px; border-radius: 14px; }
+#bottom .sep { height: 20px; margin: 0 3px; }
+#bottom .seg { padding: 2px; border-radius: 10px; }
+#bottom .seg > .pill { border-radius: 8px; }
+#bottom button.labeled, #cams button { height: 32px; padding: 0 10px 0 8px; gap: 6px; border-radius: 8px; font-size: 12px; font-weight: 550; }
+#cams button { height: 28px; padding: 0 9px 0 7px; }
+#bottom button.labeled svg, #cams button svg { width: 16px; height: 16px; stroke-width: 1.6; }
+#bottom > button.icon { width: 32px; height: 32px; padding: 0; border-radius: 8px; display: inline-grid; place-items: center; }
+#bottom > button.icon svg { width: 17px; height: 17px; }
+#speeds button { height: 28px; padding: 0 8px; font-size: 11.5px; border-radius: 8px; }
+#bottom #btnKick { height: 34px; min-width: 118px; padding: 0 16px; font-size: 13.5px; font-weight: 700; border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(255, 95, 46, .38), 0 1px 0 rgba(255,255,255,.3) inset; }
+#bottom #btnKick:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(255, 95, 46, .5), 0 1px 0 rgba(255,255,255,.3) inset; }
+#btnKick kbd { font-size: 9.5px; padding: 1px 5px; margin-left: 4px; opacity: .8; }
+.coach { bottom: calc(100% + 10px); }
+.rail { gap: 1px; padding: 5px 4px; border-radius: 14px; }
+.rail button { width: 52px; padding: 7px 0 6px; gap: 3px; border-radius: 10px; font-size: 10px; font-weight: 550; }
+.rail button svg { width: 18px; height: 18px; stroke-width: 1.6; }
+.rail button.on::before { left: -4px; top: 10px; bottom: 10px; width: 2px; }
+.rail-r button.on::before { right: -4px; }
+#left { left: 78px; } #right { right: 78px; }
+@media (max-width: 1100px) { #cams button { padding: 0 8px; } }
+
+
+/* ───────────── stage 38: the control capsule ─────────────
+   One compact glass capsule of icon buttons at the bottom centre, a fold down to the Kick button, and a tooltip with
+   name and key on every control. */
+#bottom.dock {
+  --dk-bg: rgba(20, 21, 24, .8); --dk-line: rgba(255, 255, 255, .08); --dk-fg: #bdbcb6; --dk-hi: #fff;
+  --dk-hover: rgba(255, 255, 255, .07); --dk-on: rgba(255, 255, 255, .11); --dk-track: rgba(255, 255, 255, .16);
+  position: fixed; left: 50%; bottom: 14px; top: auto; right: auto; transform: translateX(-50%); z-index: 6;
+  display: flex; align-items: center; gap: 0; padding: 4px; border-radius: 16px; border: 1px solid var(--dk-line);
+  background: var(--dk-bg); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .36), 0 1px 0 rgba(255, 255, 255, .05) inset;
+  font-family: Inter, system-ui, sans-serif; opacity: 0; transition: opacity .2s, box-shadow .2s;
+}
+#bottom.dock.ready { opacity: 1; }
+
+/* groups, with hairline dividers */
+#bottom.dock .dk-group { display: flex; align-items: center; gap: 2px; padding: 0 5px; border-left: 1px solid var(--dk-line); }
+#bottom.dock.folded .dk-group { display: none; }
+
+/* icon buttons */
+#bottom.dock .dk-btn { position: relative; width: 34px; height: 34px; padding: 0; display: inline-grid; place-items: center; border: 0;
+  border-radius: 10px; background: transparent; color: var(--dk-fg); cursor: pointer; transition: background .15s, color .15s; }
+#bottom.dock .dk-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#bottom.dock .dk-btn:hover:not(:disabled) { background: var(--dk-hover); color: var(--dk-hi); }
+#bottom.dock .dk-btn:active:not(:disabled) { transform: scale(.94); }
+#bottom.dock .dk-btn:disabled { opacity: .3; cursor: default; }
+#bottom.dock .dk-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#bottom.dock #btnPanels .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+#bottom.dock #btnPanels.on { background: transparent; }
+body.hide-panels #bottom.dock #btnPanels { background: var(--accent); color: #1a0c06; }
+#bottom.dock #cams .dk-btn { padding: 0; }
+#bottom.dock #cams .dk-btn.on { background: var(--dk-on); color: var(--accent); }
+#bottom.dock #cams .dk-btn.on::before { content: ""; position: absolute; left: 50%; bottom: 3px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
+#bottom.dock .net { stroke-opacity: .45; }
+#bottom.dock #btnPause .pl { display: none; }
+#bottom.dock #btnPause.paused .pa { display: none; }
+#bottom.dock #btnPause.paused .pl { display: inline; fill: currentColor; stroke-width: 1.2; }
+#bottom.dock #btnPause.paused { color: var(--accent); }
+
+/* the fold */
+#bottom.dock .dk-fold { width: 26px; margin-left: 2px; }
+#bottom.dock .dk-fold svg { transition: transform .25s; }
+#bottom.dock.folded .dk-fold svg { transform: rotate(180deg); }
+
+/* Kick: the one solid, coloured control */
+#bottom.dock #btnKick { position: relative; overflow: hidden; height: 40px; min-width: 124px; margin: 0 5px; padding: 0 16px; gap: 8px;
+  display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 12px; background: var(--accent); color: #fff;
+  font: 650 14.5px/1 Inter, system-ui, sans-serif; letter-spacing: .01em; animation: none;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 45%, transparent), 0 1px 0 rgba(255, 255, 255, .28) inset; transition: transform .12s, filter .15s, background .2s; }
+#bottom.dock #btnKick:hover:not(:disabled) { filter: brightness(1.07); transform: translateY(-1px); }
+#bottom.dock #btnKick:active:not(:disabled) { transform: scale(.96); }
+#bottom.dock #btnKick kbd { font: 600 10px/1 Inter, system-ui, sans-serif; padding: 3px 5px; border-radius: 5px; border: 0; background: rgba(0, 0, 0, .18); color: inherit; opacity: .85; }
+#bottom.dock #btnKick .prog { position: absolute; inset: 0; z-index: 0; transform-origin: left center; transform: scaleX(var(--p, 0)); background: rgba(255, 255, 255, .2); }
+body[data-mode="runup"] #bottom.dock #btnKick, body[data-mode="live"] #bottom.dock #btnKick { background: #2b2d32; color: #f2f1ee; box-shadow: none; }
+body[data-mode="runup"] #bottom.dock #btnKick .prog, body[data-mode="live"] #bottom.dock #btnKick .prog { background: color-mix(in srgb, var(--accent) 80%, transparent); }
+
+
+/* playback speeds: a small segmented control */
+#bottom.dock .dk-speeds { display: flex; gap: 1px; margin-left: 2px; padding: 2px; border-radius: 9px; background: rgba(255, 255, 255, .05); }
+#bottom.dock .dk-speeds button { height: 26px; min-width: 28px; padding: 0 6px; border: 0; border-radius: 7px; background: transparent; color: var(--dk-fg);
+  font: 600 12px/1 Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; cursor: pointer; }
+#bottom.dock .dk-speeds button:hover { color: var(--dk-hi); background: var(--dk-hover); }
+#bottom.dock .dk-speeds button.on { background: #f2f1ee; color: #141416; }
+
+/* tooltips: name and key, above the control, after a short hover */
+#bottom.dock [data-tip] { position: relative; }
+#bottom.dock [data-tip]:hover::after, #bottom.dock [data-tip]:focus-visible::after {
+  content: attr(data-tip) "\2003" attr(data-key); position: absolute; z-index: 3; left: 50%; bottom: calc(100% + 12px); transform: translateX(-50%);
+  white-space: pre; padding: 6px 9px; border-radius: 8px; background: #0b0b0d; color: #ecebe6; pointer-events: none;
+  font: 500 11.5px/1 Inter, system-ui, sans-serif; letter-spacing: .01em; box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+  animation: dkTip .14s .3s both; }
+#bottom.dock [data-tip]:active::after { display: none; }
+@keyframes dkTip { from { opacity: 0; } to { opacity: 1; } }
+#bottom.dock .coach { left: 8px; }
+
+/* the illustrated look: a light capsule */
+body.paper #bottom.dock { --dk-bg: rgba(251, 250, 247, .9); --dk-line: #e2ded4; --dk-fg: #4b4b52; --dk-hi: #111; --dk-hover: rgba(0, 0, 0, .05);
+  --dk-on: rgba(0, 0, 0, .07); --dk-track: rgba(0, 0, 0, .14); box-shadow: 0 12px 30px rgba(40, 34, 20, .14); }
+body.paper #bottom.dock .dk-speeds { background: rgba(0, 0, 0, .04); }
+body.paper #bottom.dock .dk-speeds button.on { background: #17171b; color: #fff; }
+body.paper[data-mode="runup"] #bottom.dock #btnKick, body.paper[data-mode="live"] #bottom.dock #btnKick { background: #e9e5db; color: #222; }
+
+/* narrower windows: the strip and the speeds give way first (a row only; a column has the height) */
+@media (max-width: 780px) { #bottom.dock .dk-speeds { display: none; } #bottom.dock #btnKick kbd { display: none; }
+  #bottom.dock #btnKick { min-width: 88px; } }
+
+/* ───────────── stage 39: the panels step aside for the kick ─────────────
+   From 2.5 s before the strike (body.kick-focus, set in js/app.js) the rails and any open drawer slide off to their own
+   side of the screen, and glide back after the ball has settled. The live readout stays. */
+.rail, #left, #right, #lab { transition: transform .7s cubic-bezier(.65, 0, .35, 1), opacity .5s ease, visibility .7s; }
+body.kick-focus #railL { transform: translateY(-50%) translateX(calc(-100% - 24px)); opacity: 0; pointer-events: none; }
+body.kick-focus #railR { transform: translateY(-50%) translateX(calc(100% + 24px)); opacity: 0; pointer-events: none; }
+body.kick-focus.left-open #left { transform: translateX(calc(-100% - 110px)); opacity: 0; pointer-events: none; }
+body.kick-focus.right-open #right { transform: translateX(calc(100% + 110px)); opacity: 0; pointer-events: none; }
+body.kick-focus:not(.storying) #lab { transform: translateX(calc(100% + 24px)); opacity: 0; pointer-events: none; }
+
+
+/* ───────────── stage 39: the ball as a map ─────────────
+   The ball in the middle, its facts around it on thin leader lines (two columns), a picture and the story when a fact
+   is clicked, and "Anatomy": the ball comes apart into its panels around its core, the facts becoming what each part
+   does. Laid out by js/showcase.js. */
+#ballShow .bs-mapcard { width: min(1180px, 96vw); height: min(720px, 92vh); display: flex; flex-direction: column; grid-template-columns: none;
+  padding: 22px 26px 18px; color: #f2f1ee; }
+.bs-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding-right: 40px; }
+.bs-head #bsName { margin: 4px 0 0; font: 650 40px/1 var(--font-display); letter-spacing: -.02em; }
+.bs-head #bsTabs { margin: 0; align-self: center; }
+.bs-map { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; }
+.bs-map .bs-stage { position: relative; display: grid; place-items: center; z-index: 1; }
+.bs-map #bsCanvas { width: min(430px, 40vw, 58vh); height: min(430px, 40vw, 58vh); }
+.bs-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 2; }
+.bs-lines path { fill: none; stroke: rgba(255, 255, 255, .5); stroke-width: 1.2; stroke-dasharray: 600; stroke-dashoffset: 600; animation: bsDraw .7s cubic-bezier(.3, .7, .2, 1) forwards; }
+.bs-lines circle { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); animation: bsPop .4s .35s both; }
+@keyframes bsDraw { to { stroke-dashoffset: 0; } }
+@keyframes bsPop { from { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0); } to { opacity: 1; transform: none; } }
+.bs-callouts { position: absolute; inset: 0; pointer-events: none; }
+.bs-call { position: absolute; pointer-events: auto; display: flex; flex-direction: column; gap: 4px; padding: 11px 13px; text-align: left;
+  border-radius: 12px; border: 1px solid rgba(255, 255, 255, .08); background: rgba(255, 255, 255, .045); color: #d9d8d2;
+  font: 400 12.5px/1.4 Inter, system-ui, sans-serif; white-space: normal; cursor: pointer; animation: bsIn .45s cubic-bezier(.2, .8, .2, 1) both;
+  transition: background .18s, border-color .18s, transform .18s; }
+.bs-call b { color: #fff; font: 650 13.5px/1.2 Inter, system-ui, sans-serif; }
+button.bs-call:hover { background: rgba(255, 255, 255, .08); border-color: color-mix(in srgb, var(--accent) 60%, transparent); transform: translateY(-1px); }
+button.bs-call::after { content: "See it ›"; margin-top: 2px; color: var(--accent); font-size: 11px; font-weight: 650; letter-spacing: .04em; opacity: .75; }
+.bs-callouts.anat .bs-call { cursor: default; border-color: rgba(255, 255, 255, .06); background: rgba(14, 15, 18, .55); }
+.bs-callouts.anat .bs-call b { color: var(--accent); }
+@keyframes bsIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* the Anatomy button: over the ball when you hover it (or after a click on it); the way back while it is apart */
+.bs-anat { position: absolute; left: 50%; bottom: 14%; transform: translate(-50%, 8px); z-index: 2; display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px 9px 12px; border: 0; border-radius: 999px; background: rgba(12, 13, 16, .82); color: #fff; backdrop-filter: blur(8px);
+  font: 650 13px/1 Inter, system-ui, sans-serif; letter-spacing: .02em; cursor: pointer; box-shadow: 0 8px 24px rgba(0, 0, 0, .4), 0 0 0 1px rgba(255, 255, 255, .12);
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .25s cubic-bezier(.2, .8, .2, 1), background .15s; }
+.bs-anat svg, .bs-back svg { width: 17px; height: 17px; fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.bs-stage:hover .bs-anat, .bs-stage.armed .bs-anat { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+.bs-anat:hover { background: var(--accent); color: #1a0c06; }
+.bs-anat:hover svg { stroke: #1a0c06; }
+.bs-mapcard.anatomy .bs-anat { display: none; }
+.bs-back { position: absolute; left: 50%; top: -6px; transform: translateX(-50%); z-index: 2; display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px 7px 9px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .08); color: #e9e8e3; cursor: pointer;
+  font: 600 12.5px/1 Inter, system-ui, sans-serif; animation: bsIn .35s .3s both; }
+.bs-back:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+.bs-back[hidden] { display: none; }
+.bs-map .bs-hint { position: absolute; left: 0; right: 0; bottom: -2px; margin: 0; }
+.bs-mapcard .bs-actions { margin: 0; padding-top: 8px; justify-content: center; }
+
+/* a fact up close: the picture and its story, over the map */
+.bs-detail { position: absolute; inset: 104px 26px 64px; z-index: 5; display: grid; grid-template-columns: 1.35fr 1fr; gap: 26px; align-items: center;
+  padding: 18px; border-radius: 18px; background: rgba(14, 15, 18, .94); border: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .5); opacity: 0; transform: scale(.97); transition: opacity .2s, transform .25s cubic-bezier(.2, .8, .2, 1); }
+.bs-detail.shown { opacity: 1; transform: none; }
+.bs-detail[hidden] { display: none; }
+.bs-detail figure { margin: 0; }
+.bs-detail img { display: block; width: 100%; aspect-ratio: 8 / 5; object-fit: cover; border-radius: 12px; background: #111; }
+.bs-detail figcaption { margin-top: 8px; color: var(--muted); font-size: 11.5px; }
+.bs-dtext h3 { margin: 6px 0 10px; font: 650 30px/1.1 var(--font-display); letter-spacing: -.015em; color: #fff; }
+.bs-dtext p:last-child { margin: 0; color: #d6d5cf; font-size: 14.5px; line-height: 1.55; }
+#bsDClose { position: absolute; top: 10px; right: 10px; color: #c9c8c2; }
+
+/* narrow windows: the facts stack under the ball, no leader lines */
+.bs-map.narrow { display: flex; flex-direction: column; overflow-y: auto; place-items: initial; align-items: center; }
+.bs-map.narrow .bs-lines { display: none; }
+.bs-map.narrow .bs-callouts { position: static; display: grid; gap: 8px; width: 100%; padding: 8px 0 26px; }
+.bs-map.narrow .bs-call { position: static; width: auto !important; }
+@media (max-width: 760px) { .bs-head { flex-direction: column; align-items: flex-start; } .bs-detail { grid-template-columns: 1fr; overflow-y: auto; inset: 60px 12px 56px; }
+  .bs-map #bsCanvas { width: 260px; height: 260px; } }
+#ballShow .bs-mapcard { background: radial-gradient(70% 75% at 50% 52%, #2c303b 0%, #16181d 62%, #0f1013 100%); }
+
+
+/* ───────────── stage 40: glass, aurora, motion ─────────────
+   The showcase card floats on a slowly flowing aurora in the ball's own colours (four blurred light blobs drifting on
+   long, unrelated loops; the colours glide from ball to ball). Everything on it is frosted glass in pill shapes, and
+   everything arrives and leaves with an expo ease. */
+@property --a1 { syntax: '<color>'; inherits: true; initial-value: #2a2d36; }
+@property --a2 { syntax: '<color>'; inherits: true; initial-value: #2a2d36; }
+@property --a3 { syntax: '<color>'; inherits: true; initial-value: #2a2d36; }
+@property --a4 { syntax: '<color>'; inherits: true; initial-value: #2a2d36; }
+#ballShow .bs-mapcard { --xo: cubic-bezier(.16, 1, .3, 1); border-radius: 30px; background: #0c0d11;
+  transition: opacity .45s var(--xo), transform .6s var(--xo), --a1 1.6s ease, --a2 1.6s ease, --a3 1.6s ease, --a4 1.6s ease; }
+#ballShow .bs-mapcard > :not(.bs-aurora) { position: relative; z-index: 1; }
+#ballShow .bs-mapcard > #bsDetail, #ballShow .bs-mapcard > #bsClose { position: absolute; }
+#ballShow .bs-mapcard > #bsDetail { z-index: 5; }
+.bs-aurora { position: absolute; inset: 0; z-index: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.bs-aurora::after { content: ""; position: absolute; inset: 0;
+  background: radial-gradient(60% 65% at 50% 52%, rgba(12, 13, 17, .15) 0%, rgba(12, 13, 17, .55) 70%, rgba(12, 13, 17, .82) 100%); }
+.bs-aurora i { position: absolute; width: 72%; aspect-ratio: 1; border-radius: 50%; filter: blur(64px); opacity: .55; mix-blend-mode: screen;
+  will-change: transform; }
+.bs-aurora i:nth-child(1) { left: -18%; top: -38%; background: radial-gradient(circle, var(--a1) 0%, transparent 64%); animation: aur1 26s ease-in-out infinite alternate; }
+.bs-aurora i:nth-child(2) { right: -20%; top: -30%; background: radial-gradient(circle, var(--a2) 0%, transparent 64%); animation: aur2 31s ease-in-out infinite alternate; }
+.bs-aurora i:nth-child(3) { left: 10%; bottom: -48%; background: radial-gradient(circle, var(--a3) 0%, transparent 64%); animation: aur3 23s ease-in-out infinite alternate; }
+.bs-aurora i:nth-child(4) { right: 0%; bottom: -40%; width: 55%; background: radial-gradient(circle, var(--a4) 0%, transparent 64%); opacity: .4; animation: aur4 37s ease-in-out infinite alternate; }
+@keyframes aur1 { 0% { transform: translate(0, 0) rotate(0deg) scale(1); } 35% { transform: translate(28%, 22%) rotate(70deg) scale(1.18); }
+  70% { transform: translate(8%, 46%) rotate(150deg) scale(.92); } 100% { transform: translate(40%, 12%) rotate(230deg) scale(1.12); } }
+@keyframes aur2 { 0% { transform: translate(0, 0) rotate(0deg) scale(1.05); } 40% { transform: translate(-30%, 30%) rotate(-80deg) scale(.9); }
+  75% { transform: translate(-12%, 55%) rotate(-160deg) scale(1.2); } 100% { transform: translate(-42%, 18%) rotate(-240deg) scale(1); } }
+@keyframes aur3 { 0% { transform: translate(0, 0) scale(1); } 30% { transform: translate(35%, -20%) scale(1.15); }
+  65% { transform: translate(-10%, -38%) scale(.9); } 100% { transform: translate(20%, -12%) scale(1.2); } }
+@keyframes aur4 { 0% { transform: translate(0, 0) scale(.9); } 50% { transform: translate(-45%, -30%) scale(1.25); } 100% { transform: translate(-15%, -55%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .bs-aurora i { animation: none; } }
+
+/* frosted glass, pill-shaped */
+.bs-call { border-radius: 999px; padding: 12px 24px 13px 22px; gap: 3px; color: #e6e5e0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .05)); border: 1px solid rgba(255, 255, 255, .16);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .2);
+  animation: bsPillIn .7s cubic-bezier(.16, 1, .3, 1) both;
+  transition: background .35s cubic-bezier(.16, 1, .3, 1), border-color .35s, transform .45s cubic-bezier(.16, 1, .3, 1), box-shadow .35s; }
+.bs-call b { font-size: 13.5px; }
+.bs-call span { color: rgba(240, 239, 234, .78); }
+button.bs-call::after { content: none; }
+button.bs-call b::after { content: "  ›"; color: var(--accent); white-space: pre; }
+button.bs-call:hover { transform: translateY(-2px) scale(1.025); background: linear-gradient(180deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .08));
+  border-color: rgba(255, 255, 255, .3); box-shadow: 0 16px 40px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .28); }
+.bs-callouts.anat .bs-call { background: linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .035)); border-color: rgba(255, 255, 255, .12); }
+.bs-call.leaving { animation: bsPillOut .24s cubic-bezier(.4, 0, 1, 1) both; }
+@keyframes bsPillIn { from { opacity: 0; transform: translateY(12px) scale(.92); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes bsPillOut { to { opacity: 0; transform: translateY(-8px) scale(.95); filter: blur(6px); } }
+.bs-lines path { stroke: rgba(255, 255, 255, .55); stroke-width: 1.2; stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
+.bs-lines circle { animation: none; }
+.bs-lines { transition: opacity .2s; }
+.bs-lines.leaving { opacity: 0; }
+
+/* the Anatomy pill and the way back (a round U-turn arrow that spins in) */
+.bs-anat { background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .06)); border: 1px solid rgba(255, 255, 255, .2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6); backdrop-filter: blur(16px) saturate(1.6); box-shadow: 0 10px 30px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .25);
+  transition: opacity .35s cubic-bezier(.16, 1, .3, 1), transform .5s cubic-bezier(.16, 1, .3, 1), background .25s; }
+.bs-back { width: 44px; height: 44px; padding: 0; justify-content: center; border-radius: 50%; top: -10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .06)); border: 1px solid rgba(255, 255, 255, .2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6); backdrop-filter: blur(16px) saturate(1.6); box-shadow: 0 10px 28px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .25);
+  animation: bsBackIn .7s .25s cubic-bezier(.16, 1, .3, 1) both; transition: transform .45s cubic-bezier(.16, 1, .3, 1), background .25s; }
+.bs-back svg { width: 20px; height: 20px; stroke: #fff; stroke-width: 2; }
+.bs-back:hover { transform: translateX(-50%) rotate(-25deg) scale(1.08); background: var(--accent); }
+@keyframes bsBackIn { from { opacity: 0; transform: translateX(-50%) scale(.5) rotate(-120deg); } to { opacity: 1; transform: translateX(-50%) scale(1) rotate(0); } }
+
+/* the rest of the card in the same glass */
+#ballShow .bs-mapcard #bsTabs { padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .12);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+#ballShow .bs-mapcard #bsTabs button { border-radius: 999px; transition: background .4s cubic-bezier(.16, 1, .3, 1), color .3s; }
+#ballShow .bs-mapcard #bsTabs button.on { background: rgba(255, 255, 255, .18); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2); }
+#ballShow .bs-mapcard .bs-actions .primary { border-radius: 999px; padding: 11px 24px; transition: transform .4s cubic-bezier(.16, 1, .3, 1), filter .2s; }
+#ballShow .bs-mapcard .bs-actions .primary:hover { transform: translateY(-2px); filter: brightness(1.06); }
+#ballShow .bs-mapcard #bsClose { border-radius: 50%; background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .12); }
+.bs-detail { border-radius: 28px; background: rgba(14, 15, 19, .66); border-color: rgba(255, 255, 255, .14);
+  -webkit-backdrop-filter: blur(26px) saturate(1.5); backdrop-filter: blur(26px) saturate(1.5);
+  transition: opacity .35s cubic-bezier(.16, 1, .3, 1), transform .55s cubic-bezier(.16, 1, .3, 1); transform: translateY(10px) scale(.97); }
+.bs-detail img { border-radius: 20px; }
+#ballShow .bs-mapcard #bsCanvas { transition: transform .6s cubic-bezier(.16, 1, .3, 1); }
+
+/* stage 41: the living background (js/backdrop.js) fills the card; a soft vignette keeps the text readable */
+.bs-aurora .bd-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.bs-aurora::after { z-index: 1; background: radial-gradient(70% 70% at 50% 55%, rgba(12, 13, 17, 0) 0%, rgba(12, 13, 17, .35) 75%, rgba(12, 13, 17, .6) 100%); }
+.bs-lines path { stroke-linejoin: miter; stroke-linecap: square; }
+.bs-lines circle { fill: rgba(12, 13, 17, .6); stroke: #fff; stroke-width: 1.4; filter: drop-shadow(0 0 5px rgba(255, 255, 255, .5)); }
+/* the photographs fade in as they arrive from Commons; their credit sits under them */
+.bs-detail img { opacity: 0; transition: opacity .5s cubic-bezier(.16, 1, .3, 1); }
+.bs-detail img.loaded { opacity: 1; }
+.bs-detail figcaption a { color: #e9e8e3; text-decoration-color: var(--accent); }
+
+/* stage 42: anatomy shows only the parts (no hint, no button); the close dissolves everything but the ball, which flies
+   home into the logo */
+.bs-mapcard #bsHint, .bs-mapcard .bs-actions { transition: opacity .4s cubic-bezier(.16, 1, .3, 1), transform .5s cubic-bezier(.16, 1, .3, 1); }
+.bs-mapcard.anatomy #bsHint, .bs-mapcard.anatomy .bs-actions { opacity: 0; transform: translateY(8px); pointer-events: none; }
+#ballShow.closing .bs-backdrop { background: rgba(6, 8, 10, 0); backdrop-filter: blur(0); transition: background .75s ease .1s, backdrop-filter .75s ease .1s; }
+#ballShow.closing .bs-mapcard { background: transparent; border-color: transparent; box-shadow: none;
+  transition: background .5s ease, border-color .5s ease, box-shadow .5s ease; }
+#ballShow.closing .bs-mapcard > :not(.bs-map), #ballShow.closing .bs-map > :not(.bs-stage), #ballShow.closing .bs-stage > button {
+  opacity: 0; filter: blur(6px); transform: scale(.97); transition: opacity .45s ease, filter .45s ease, transform .5s cubic-bezier(.4, 0, .2, 1); }
+#ballShow.closing .bs-stage::before { opacity: 0; transition: opacity .3s; }

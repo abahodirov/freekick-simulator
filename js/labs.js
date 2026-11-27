@@ -27,6 +27,8 @@
   let current = 'play';
   function open(mode) {
     current = mode;
+    // a section lives in a panel: opening one brings the panels back if they were hidden
+    if (mode !== 'play' && A.setPanels) A.setPanels(true);
     document.querySelectorAll('#modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
     document.body.classList.toggle('lab-open', mode !== 'play');
     A.extraRibbons.length = 0;
@@ -37,7 +39,8 @@
     else if (mode === 'story') window.FKStory && window.FKStory.panel(body, title);
     drawer.hidden = mode === 'play';
   }
-  $('modes').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { open(b.dataset.mode); b.blur(); } });
+  // any tab (Play too) brings hidden panels back, so a click on a section always shows something
+  $('modes').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { if (A.setPanels) A.setPanels(true); open(b.dataset.mode); b.blur(); } });
   $('labClose').addEventListener('click', () => open('play'));
 
   // ───────────── shared: run a set of flights and compare ─────────────
@@ -109,14 +112,18 @@
   const sourceLink = (s) => el('a', { href: s.url, target: '_blank', rel: 'noopener' }, s.title);
 
   // ───────────── Ball lab ─────────────
-  // The three balls you can play with, explained in plain words; the wind-tunnel detail sits under "The science".
+  // The balls you can play with, explained in plain words; the wind-tunnel detail sits under "The science".
   const LAB_BALLS = [
     { id: 'engine', name: 'Classic', year: '32 panels', colour: '#3987e5',
       line: 'Stitched seams roughen the air around it early, so it flies the most predictably: what you aim is what you get.' },
     { id: 'jabulani', name: 'Jabulani', year: '2010', colour: '#e5713a',
       line: 'Smooth and nearly seamless. It stays "draggy" until very high speed, and hit without spin it wobbles and swerves late: the keeper\'s nightmare.' },
     { id: 'trionda', name: 'Trionda', year: '2026', colour: '#2fa36b',
-      line: 'Only four panels, with raised and pressed-in surface details. No wind-tunnel data is published yet, so here it flies like the Classic.' },
+      line: 'Deep seams and grooves make it the "roughest" modern ball in the wind tunnel: very steady, but with the most drag at speed, so a hard-hit ball dies sooner and drops short.' },
+    { id: 'euro24', name: 'Fussballliebe', year: 'Euro 2024', colour: '#d8a21c',
+      line: 'Flies with the Al Rihla\'s measurements (the closest tested design): the steadiest of all, so a no-spin strike hardly wobbles.' },
+    { id: 'ucl', name: 'UCL starball', year: 'Champions League', colour: '#c7472a',
+      line: 'No wind-tunnel data has been published for any Champions League ball, so it flies like the Classic.' },
   ];
   let ballSel = 'jabulani';
   const orient = 'A';
@@ -124,7 +131,7 @@
   const inPlay = (id) => (A.cfg.ballId || 'engine') === id;
   function ballLab() {
     title.textContent = 'Ball lab';
-    body.append(el('p', { class: 'lead' }, 'Same kick, different ball, different flight. Pick a ball to see how it behaves, then race all three with your current kick.'));
+    body.append(el('p', { class: 'lead' }, 'Same kick, different ball, different flight. Pick a ball to see how it behaves, then race them all with your current kick.'));
     const list = el('div', { class: 'balllist three' });
     for (const lb of LAB_BALLS) {
       list.append(el('button', { class: lb.id === ballSel ? 'on' : '', on: { click: () => { ballSel = lb.id; open('ball'); } } },
@@ -132,7 +139,7 @@
     }
     body.append(list);
     const lb = LAB_BALLS.find((x) => x.id === ballSel), ap = aeroOf(lb.id), atm = A.sim.atm;
-    // three plain meters, each scaled against the most extreme of the three balls
+    // three plain meters, each scaled against the most extreme of the balls
     const vSlip = FKBalls.speedAtRe(ap.reCrit, atm.rho, atm.mu) * 3.6;
     const Re30 = atm.rho * 30 * 0.22 / atm.mu, cd30 = FK.dragCoefficient(Re30, 0, ap);
     const meter = (label, frac, value, hint) => el('div', { class: 'meter' },
@@ -147,7 +154,7 @@
       meter('Turns "slippery" above', vSlip / 140, `${vSlip.toFixed(0)} km/h`, 'Above this speed the air grips the ball less (the drag crisis).')));
     body.append(el('div', { class: 'btnrow' },
       el('button', { class: 'primary', on: { click: () => { useBall(lb.id); A.toast(`Now playing with the ${lb.name}`); open('ball'); } } }, inPlay(lb.id) ? 'In play ✓' : 'Play with this ball'),
-      el('button', { on: { click: () => race() } }, 'Race all three'),
+      el('button', { on: { click: () => race() } }, 'Race them all'),
       window.FKShowcase ? el('button', { on: { click: () => { FKShowcase.open(); FKShowcase.select(lb.id); } } }, 'See it up close') : null));
     const out = el('div', { id: 'ballCompare' }); body.append(out);
 
@@ -180,7 +187,7 @@
     if (id === 'engine') delete A.cfg.ballId; else A.cfg.ballId = id;
     A.configChanged();
   }
-  /** The same kick (same seed, so the same air for every ball) with each of the three balls, drawn on the pitch. */
+  /** The same kick (same seed, so the same air for every ball) with each of the balls, drawn on the pitch. */
   function race() {
     const knuckle = Math.hypot(A.cfg.kick.sideSpin, A.cfg.kick.topSpin) < 1;
     const items = LAB_BALLS.map((lb) => {
@@ -208,7 +215,7 @@
       out.append(el('p', { class: 'hint' }, `Same boot, same strike: the balls arrive up to ${(dz * 100).toFixed(0)} cm apart in height and ${(dy * 100).toFixed(0)} cm apart sideways.` +
         (knuckle ? ' Your kick has almost no spin, so the Jabulani\'s wobble shows.' : ' Try the Knuckleball preset to see the Jabulani wobble.')));
     }
-    out.append(el('p', { class: 'hint' }, 'The three paths are drawn on the pitch in the balls\' colours.'));
+    out.append(el('p', { class: 'hint' }, 'The paths are drawn on the pitch in the balls\' colours. The UCL starball has no published wind-tunnel data and flies like the Classic, so its path lies on top of the Classic\'s.'));
   }
 
   // ───────────── the historical exhibition ─────────────
@@ -248,7 +255,7 @@
       el('p', {}, `When you watch it, the ball goes in, as it did. The simulated goalkeeper (labelled ${f.goalkeeper}) reads every shot with some error; the recreation uses a read under which the real outcome happens. The ball's flight is pure physics either way.`),
       el('div', { class: 'btnrow' },
         el('button', { class: 'primary', on: { click: () => { load(k); A.play(); } } }, 'Watch it'),
-        el('button', { on: { click: () => { load(k); A.setCam('taker'); A.play(); } } }, 'From the taker'),
+        el('button', { on: { click: () => { load(k); A.setCam('broadcast'); A.play(); } } }, 'TV view'),
         el('button', { on: { click: () => { load(k); open('story'); window.FKStory.start(); } } }, 'Anatomy of this kick'))));
     body.append(sec('The goalkeeper', k.keeper));
     const ex = k.experiment, out = el('div');
@@ -291,12 +298,15 @@
     if (r.keeperPos) c.keeper.pos = r.keeperPos; else delete c.keeper.pos;
     if (r.keeperRooted) c.keeper.rooted = true; else delete c.keeper.rooted;   // documented as not moving
     delete c.aero;
-    A.aimAt(r.target.y, r.target.z);
+    if (r.aim) { c.kick.azimuth = r.aim.azimuth; c.kick.elevation = r.aim.elevation; A.syncControls(); A.configChanged(); }   // set by eye
+    else A.aimAt(r.target.y, r.target.z);
     const seed = seedForGoal(c);
     if (seed !== null) { c.seed = seed; A.configChanged(); }
     A.sides = k.kits || null;
     A.tags = [{ who: 'taker', text: k.facts.player }, { who: 'keeper', text: k.facts.goalkeeper }];
     if (k.wallNames) k.wallNames.forEach((n, i) => A.tags.push({ who: 'wall' + i, text: n }));
+    A.layoff = r.layoff || null;
+    if (r.layoff) A.tags.push({ who: 'support', text: r.layoff.name });
     k._seedOk = seed !== null;
     if (!quietLoad) A.toast(`${k.facts.player} v ${k.facts.opponent} (${k.facts.date.slice(0, 4)}): recreation loaded`);
   }

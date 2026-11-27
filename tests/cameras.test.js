@@ -8,6 +8,8 @@ const ctx = (over) => Object.assign({ ball: { x: 24, y: 5 }, s: [24, 5, 0.11, -2
   opts: { followBack: 5.5, followUp: 1.3 }, keeperY: -0.7 }, over || {});
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const len = (v) => Math.hypot(v[0], v[1], v[2]);
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const norm = (v) => { const l = len(v) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 console.log('Cameras');
 test('there are 10 distinct cameras', () => ok(new Set(CAM.NAMES).size === 10, 'names'));
@@ -33,10 +35,32 @@ test('keeper camera with his head: at his eyes, looking at the ball, tilting wit
   const head = { pos: [0.3, 1.2, 1.1], F: [1, 0, 0], U: [0, 0.6, 0.8] };
   const t = CAM.desired('keeper', ctx({ keeperHead: head }));
   ok(Math.hypot(t.eye[0] - 0.4, t.eye[1] - 1.2, t.eye[2] - 1.13) < 0.05, 'eye not at the head');
-  ok(t.target[0] === 24 && t.target[1] === 5, 'not looking at the ball');
+  const toBall = sub([24, 5, 0.11], t.eye), toT = sub(t.target, t.eye);
+  ok(dot(toBall, toT) / len(toBall) / len(toT) > 0.9999, 'not looking at the ball');
   ok(t.up[1] > 0.2, 'no tilt from the head roll');
-  const back = CAM.desired('keeper', ctx({ keeperHead: head, s: [-1, 0, 0.5, -5, 0, 0, 0, 0, 0] }));
-  ok(back.target[0] > 5, 'turns round to a ball in the net');
+});
+test('keeper eyes: smooth pursuit of the ball, into the net after a goal, then slowly round to the scorer', () => {
+  const head = { pos: [0.3, 0, 1.7], F: [1, 0, 0], U: [0, 0, 1] }, gaze = {}, dt = 1 / 60;
+  const look = (t) => norm(sub(t.target, t.eye));
+  CAM.desired('keeper', ctx({ keeperHead: head, gaze, dt, mode: 'live', s: [20, 0, 1, -25, 0, 0, 0, 0, 0] }));
+  // the ball jumps 4 m sideways: one frame later the eyes have moved toward it, but not all the way (no snap)
+  const ball = [20, 4, 1], t1 = CAM.desired('keeper', ctx({ keeperHead: head, gaze, dt, mode: 'live', s: [...ball, -25, 0, 0, 0, 0, 0] }));
+  const want = norm(sub(ball, t1.eye)), got = look(t1);
+  ok(dot(got, want) < 0.9999 && got[1] > 0.002, 'the gaze snapped (or did not move)');
+  // a goal: the ball is behind him; he follows it into the net...
+  const net = [-1, 1, 1], taker = { x: 22, y: -8, z: 0 };
+  let t = null;
+  for (let i = 0; i < 40; i++) t = CAM.desired('keeper', ctx({ keeperHead: head, gaze, dt, mode: 'done', goal: true, taker, s: [...net, 0, 0, 0, 0, 0, 0] }));
+  ok(look(t)[0] < 0, 'does not look round into the net');
+  // ...and a beat later turns, slowly (no faster than ~70°/s), to the scorer
+  let prev = look(t), maxRate = 0;
+  for (let i = 0; i < 300; i++) {
+    t = CAM.desired('keeper', ctx({ keeperHead: head, gaze, dt, mode: 'done', goal: true, taker, s: [...net, 0, 0, 0, 0, 0, 0] }));
+    const d = look(t); maxRate = Math.max(maxRate, Math.acos(Math.min(1, dot(d, prev))) / dt); prev = d;
+  }
+  const toTaker = norm(sub([22, -8, 1.2], t.eye));
+  ok(dot(look(t), toTaker) > 0.999, 'never ends up looking at the scorer');
+  ok(maxRate < 1.25, 'turned too fast: ' + maxRate.toFixed(2) + ' rad/s');
 });
 test('taker camera with his head: at his eyes, over the ball toward the goal, then after the ball', () => {
   const head = { pos: [26, 6, 1.65], F: [-1, 0, 0], U: [0, 0, 1] };

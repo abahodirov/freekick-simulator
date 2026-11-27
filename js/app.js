@@ -125,7 +125,7 @@
   function setKickLabel(text) { const l = $('btnKick').querySelector('.lbl'); if (l) l.textContent = text; }
   function syncPause() {
     const b = $('btnPause'); b.classList.toggle('paused', ui.paused);
-    b.title = ui.paused ? 'Resume (P)' : 'Pause (P)'; b.setAttribute('aria-label', ui.paused ? 'Resume' : 'Pause');
+    b.dataset.tip = ui.paused ? 'Resume' : 'Pause'; b.setAttribute('aria-label', ui.paused ? 'Resume' : 'Pause');
   }
 
   function kick(skipRunup) {
@@ -275,6 +275,7 @@
   function renderTakers() {
     const box = $('takers'); box.innerHTML = '';
     for (const ch of FKPeople.CHARACTERS) {
+      if (ch.support) continue;                 // (team-mates in a recreation, not takers)
       const b = document.createElement('button');
       b.dataset.taker = ch.id; b.className = ch.id === ui.taker ? 'on' : '';
       const sw = document.createElement('i'); sw.className = 'kit';
@@ -655,7 +656,7 @@
   }
   function togglePanels() {
     const hid = document.body.classList.toggle('hide-panels'), b = $('btnPanels');
-    b.classList.toggle('on', !hid); b.setAttribute('aria-pressed', String(!hid)); b.title = hid ? 'Show the side panels (H)' : 'Hide the side panels (H)';
+    b.classList.toggle('on', !hid); b.setAttribute('aria-pressed', String(!hid)); b.dataset.tip = hid ? 'Show panels' : 'Hide panels';
     b.querySelector('.lbl').textContent = hid ? 'Show panels' : 'Hide panels';
     dismissPanelsTip();
   }
@@ -723,7 +724,7 @@
       case 'x': clearTrails(); break;
       case '?': $('help').showModal(); break;
       default: {
-        if (k >= '1' && k <= '6') setCam(['kicker', 'broadcast', 'follow', 'goal', 'keeper', 'taker'][+k - 1]);
+        if (k >= '1' && k <= '5') setCam(['kicker', 'broadcast', 'follow', 'goal', 'keeper'][+k - 1]);
         else return;
       }
     }
@@ -744,16 +745,18 @@
     el.addEventListener('input', () => { camOpts[key] = parseFloat(el.value); show(); });
     el.addEventListener('pointerup', () => el.blur());
   }
-  function desiredCamera() {
+  const keeperGaze = {};
+  function desiredCamera(dt) {
     // while the scorer celebrates, the camera goes to him (orbit and the paused inspect view stay the user's)
     // (the keeper's own eyes stay his: you watch the scorer run off from the goal line)
     const name = inspect.on && ui.paused && mode !== 'aim' ? 'inspect' : takerCeleb && ui.cam !== 'orbit' && ui.cam !== 'keeper' ? 'celebrate' : ui.cam;
     return FKCam.desired(name, { ball: cfg.ball, s: sim.s, mode, goal: sim.goal, followDir, orbit, inspect, opts: camOpts, keeperY: sim.keeper ? sim.keeper.y0 : 0,
-      keeperHead: sim.keeper ? keeperHead : null, takerHead,
+      keeperHead: sim.keeper ? keeperHead : null, takerHead, gaze: keeperGaze, dt,
       taker: takerPos ? { x: takerPos[0], y: takerPos[1], z: takerPos[2] } : null, celeb: takerCeleb, time: performance.now() / 1000 });
   }
   function updateCamera(dt) {
-    const t = desiredCamera();
+    if (ui.cam !== 'keeper' || camSnap) keeperGaze.d = null;     // (fresh eyes whenever you switch to him)
+    const t = desiredCamera(dt);
     const a = camSnap ? 1 : 1 - Math.exp(-dt * t.k);
     camSnap = false;
     for (let i = 0; i < 3; i++) {
@@ -771,7 +774,7 @@
   view.addEventListener('pointerup', () => { dragging = false; });
   view.addEventListener('pointermove', (e) => {
     if (!dragging) return;
-    // turning or aiming by hand clicks like a fine dial
+    // turning or aiming by hand: a soft rush of air (FKSound.spin)
     if (ui.cam === 'orbit' || mode === 'aim' || ui.paused) FKSound.spin(Math.hypot(e.movementX, e.movementY) * 0.006, Math.hypot(e.movementX, e.movementY) * 0.25);
     if (ui.cam === 'orbit') {
       orbit.yaw -= e.movementX * 0.006;
@@ -883,7 +886,7 @@
     const withKit = (lk, kit) => (kit ? { ...lk, kit: { ...lk.kit, shirt2: kit.shirt, pattern: 0, ...kit } } : lk);
     sim.wall.forEach((p, i) => { const lk = withKit(wallLook(i), sides && sides.defence); out.push({ body: FKPeople.wallBody(p, animClock + i * 1.7), look: ink ? greyLook(lk) : lk }); });
     if (sim.keeper) {
-      const kb = FKPeople.keeperBody(sim.keeper, animClock, sim.s && [sim.s[0], sim.s[1], sim.s[2]]);
+      const kb = FKPeople.keeperBody(sim.keeper, animClock, sim.s && [sim.s[0], sim.s[1], sim.s[2]], { toStrike: mode === 'runup' ? -runT : undefined });
       // where his eyes are, for the keeper's-eye camera
       keeperHead = { pos: kb.head, F: (kb.H && kb.H.F) || kb.F, U: (kb.H && kb.H.U) || kb.U };
       out.push({ body: kb, look: withKit(KEEPER_LOOK, sides && sides.keeper && { ...sides.keeper, number: 1 }) });
@@ -891,19 +894,45 @@
     const ch0 = taker();
     const ch = sides && sides.attack ? { ...ch0, kit: { ...ch0.kit, ...sides.attack } } : ch0;
     const L = FK.launchState(mode === 'aim' ? cfg : sim.cfg);
-    // once the shot is over the taker's own clock keeps running (he finishes his follow-through, and after a goal he
-    // celebrates) instead of freezing with the simulation
-    const t = mode === 'aim' ? -99 : mode === 'runup' ? runT : mode === 'done' ? sim.t + (animClock - doneClock) : sim.t;
+    const t = takerT();
+    // a team-mate at the ball (Kroos v Sweden: Reus stops the lay-off under his sole, then steps away)
+    supportIdx = -1;
+    if (layoffNow) {
+      supportIdx = out.length;
+      const mate = FKPeople.CHAR_BY_ID[API.layoff.mate];
+      out.push({ body: FKPeople.supportBody(mate, animClock + 0.9, layoffNow.O, layoffNow.X, layoffNow.sole),
+        look: sides && sides.attack ? { ...mate, kit: { ...mate.kit, ...sides.attack, number: mate.kit.number } } : mate });
+    }
     const kb = FKPeople.kickerBody(ch, t, sim.cfg.ball, [L.fx, L.fy], animClock, goalAt !== null ? { tGoal: goalAt } : null);
     takerPos = kb.pelvis;
     takerHead = { pos: kb.head, F: (kb.H && kb.H.F) || kb.F, U: (kb.H && kb.H.U) || kb.U };
-    takerCeleb = kb.celebDir ? { dx: kb.celebDir[0], dy: kb.celebDir[1] } : null;
+    takerCeleb = kb.celebDir ? { dx: kb.celebDir[0], dy: kb.celebDir[1], type: kb.celeb } : null;
     if (kb.celeb && !celebShown) { celebShown = true; toast(`${ch.short}: ${FKPeople.CELEB_NAMES[kb.celeb]}`); }
     out.push({ body: kb, look: ch });
     lastBodies = out;
     return out;
   }
-  let lastBodies = [];
+  let lastBodies = [], supportIdx = -1, layoffNow = null;
+  /** The taker's clock: s after the strike (negative in the run-up). Once the shot is over it keeps running (he
+   * finishes his follow-through, and after a goal he celebrates) instead of freezing with the simulation. */
+  function takerT() { return mode === 'aim' ? -99 : mode === 'runup' ? runT : mode === 'done' ? sim.t + (animClock - doneClock) : sim.t; }
+  /**
+   * A lay-off before the shot (API.layoff = {mate, dist}): the ball starts dist metres to the taker's left of the
+   * spot, is rolled across as he gets ready, and the team-mate standing beside the spot stops it under his sole and
+   * steps away just before the strike. Returns the ball's position and the team-mate's stance for the taker's time t.
+   */
+  function layoffAt(t) {
+    const c = mode === 'aim' ? cfg : sim.cfg, b = c.ball, L = FK.launchState(c), lo = API.layoff;
+    const F = [L.fx, L.fy], R = [F[1], -F[0]], d = lo.dist || 1.1, r = FK.C.BALL_RADIUS;
+    const sm = (a, z, x) => { const u = clamp((x - a) / (z - a), 0, 1); return u * u * (3 - 2 * u); };
+    const tA = -FKPeople.runTime(taker()) - 0.4, tP0 = tA + 0.1, tP1 = tA + 0.85;
+    const u = clamp((t - tP0) / (tP1 - tP0), 0, 1), e = 1 - (1 - u) * (1 - u);       // a roll that slows down
+    const ball = [b.x - R[0] * d * (1 - e), b.y - R[1] * d * (1 - e), r];
+    const away = sm(-0.5, 0.15, t);
+    const O = [b.x + R[0] * (0.36 + 0.8 * away) - F[0] * (0.11 + 0.45 * away), b.y + R[1] * (0.36 + 0.8 * away) - F[1] * (0.11 + 0.45 * away), 0];
+    const w = sm(tP1 - 0.22, tP1 + 0.02, t) * (1 - sm(-0.6, -0.36, t));
+    return { ball, O, X: [-R[0], -R[1], 0], sole: { p: ball, w }, rolling: u > 0 && u < 1 };
+  }
 
   // name tags over people (exhibition recreations): {who: 'taker'|'keeper'|'wall0'.., text}
   const tagLayer = $('tags');
@@ -918,6 +947,7 @@
       let b = null;
       if (tg.who === 'taker') b = lastBodies[lastBodies.length - 1];
       else if (tg.who === 'keeper' && sim.keeper) b = lastBodies[nWall];
+      else if (tg.who === 'support' && supportIdx >= 0) b = lastBodies[supportIdx];
       else if (tg.who.startsWith('wall')) b = lastBodies[+tg.who.slice(4)];
       const p = b && renderer.project(b.body.head[0], b.body.head[1], b.body.head[2] + 0.32);
       if (!p) { elT.hidden = true; return; }
@@ -928,11 +958,15 @@
   let takerPos = null, takerCeleb = null, keeperHead = null, takerHead = null;
 
   // ── the dock reacts to the shot: the kick button fills as the taker runs up; body[data-mode] drives styling ──
-  const dock = { kick: $('btnKick'), p: -1, mode: '' };
+  const dock = { kick: $('btnKick'), p: -1, mode: '', focus: false };
   function updateDock() {
     const p = mode === 'runup' ? clamp(1 - runT / Math.min(-0.01, runFrom), 0, 1) : mode === 'live' ? 1 : 0;
     if (Math.abs(p - dock.p) > 0.004) { dock.kick.style.setProperty('--p', p.toFixed(3)); dock.p = p; }
     if (mode !== dock.mode) { document.body.dataset.mode = mode; dock.mode = mode; }
+    // from 2.5 s before the strike until the ball has settled, the side rails and drawers slide away to their own
+    // sides, leaving the pitch clear; they glide back about 1.5 s after the flight ends
+    const focus = (mode === 'runup' && runT > -2.5) || mode === 'live' || (mode === 'done' && animClock - doneClock < 1.5);
+    if (focus !== dock.focus) { document.body.classList.toggle('kick-focus', focus); dock.focus = focus; }
   }
   /** Segmented controls get a sliding highlight that follows whichever button is on. */
   function initSliders() {
@@ -976,21 +1010,18 @@
     for (const h of frameHooks) h(dt);
     syncClear();
     updateCamera(dt);
+    layoffNow = API.layoff ? layoffAt(takerT()) : null;
+    const preShot = layoffNow && (mode === 'aim' || mode === 'runup');
     if (renderer) {
       renderer.draw({
         cam, dt,
-        ball: { x: sim.s[0], y: sim.s[1], z: sim.s[2], q: sim.q },
+        ball: preShot ? { x: layoffNow.ball[0], y: layoffNow.ball[1], z: layoffNow.ball[2], q: sim.q } : { x: sim.s[0], y: sim.s[1], z: sim.s[2], q: sim.q },
         bodies: bodies(), light: ui.light, style: ui.style, net: sim.net, ballDesign: sim.cfg.ballId,
         ribbons: buildRibbons(),
       });
     }
     updateTags();
     updateDock();
-    // the crowd: a murmur while you line up, building through the run-up, loudest in flight (stadium look only)
-    if (frameNo % 20 === 0) {
-      const lv = ui.style !== 'real' || ui.paused ? 0 : mode === 'runup' ? 0.55 + 0.45 * clamp(1 - runT / Math.min(-0.01, runFrom), 0, 1) : mode === 'live' ? 1 : mode === 'done' ? 0.7 : 0.5;
-      FKSound.crowd(lv);
-    }
     if (mode === 'live' || frameNo % 6 === 0) updateTiles();
     if ((mode === 'live' && frameNo % 3 === 0) || frameNo % 20 === 0) { if (chartHover < 0) drawChart(); }
     if (mode === 'live' && frameNo % 6 === 0) drawMap();
@@ -1002,13 +1033,17 @@
   const API = {
     cfg, ui,
     get sim() { return sim; }, get mode() { return mode; }, get runT() { return runT; }, get lastShot() { return lastShot; },
+    /** Seconds since the flight ended (follow-through, celebration); 0 before that. */
+    get afterT() { return mode === 'done' ? Math.max(0, animClock - doneClock) : 0; },
     extraRibbons: [],
     sides: null,        // match kits for an exhibition recreation: {attack, defence, keeper}
     tags: [],           // name tags shown over people
     /** Leave a recreation: back to the user's own kits, no name tags. */
-    clearMatch() { API.sides = null; API.tags = []; },
+    clearMatch() { API.sides = null; API.tags = []; API.layoff = null; },
+    layoff: null,       // a lay-off before the shot: {mate: character id, dist: m}
     onFrame(fn) { frameHooks.push(fn); },
     setupAim, configChanged, syncControls, setCam, selectTaker, toast, kick, replay,
+    inspect,            // the paused orbit around the ball {on, yaw, pitch, dist} (used for the showcase pictures)
     taker,
     /** Solve the aim for a goal-line target with the current speed and spin, and apply it. */
     aimAt(ty, tz) {
@@ -1018,6 +1053,8 @@
     },
     setSpeed(v) { ui.speed = v; document.querySelectorAll('#speeds button').forEach((x) => x.classList.toggle('on', parseFloat(x.dataset.speed) === v)); },
     setPaused(p) { if (ui.paused !== p) togglePause(); },
+    /** Show (true) or hide (false) the panels, as the dock's Panels button does. */
+    setPanels(on) { if (document.body.classList.contains('hide-panels') === !!on) togglePanels(); },
     setForces(on) { ui.forces = on; $('iForces').checked = on; },
     /** Take the current set-up as a kick (with the run-up) without counting it in the score. */
     play(from) {

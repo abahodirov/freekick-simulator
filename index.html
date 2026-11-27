@@ -226,54 +226,73 @@
 <div id="banner" hidden></div>
 <div id="badge" hidden></div>
 
-<footer id="bottom">
-  <button id="btnPanels" class="labeled on" title="Hide the side panels (H)" aria-label="Hide or show the side panels" aria-pressed="true">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path class="l" d="M8 5v14"/><path class="r" d="M16 5v14"/></svg><span class="lbl">Hide panels</span>
-  </button>
+<footer id="bottom" class="dock" data-edge="bottom" data-orient="h">
+  <!-- the control capsule: icon buttons with tooltips (name and key), one Kick button; folds down to Kick (B) -->
   <div id="panelsTip" class="coach" hidden role="status">Hide or show the side panels here, or press <kbd>H</kbd><button aria-label="Got it">Got it</button></div>
-  <div class="seg slider" id="cams" role="group" aria-label="Camera">
-    <button data-cam="kicker" class="on" title="Behind the ball (1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="17" r="3"/><path d="M12 12V4M8.5 7.5 12 4l3.5 3.5"/></svg><span>Behind</span></button>
-    <button data-cam="broadcast" title="TV broadcast camera (2)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M9 21h6M12 18v3"/></svg><span>TV</span></button>
-    <button data-cam="follow" title="Chase the ball (3)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="12" r="4"/><path d="M3 9h5M2 12h6M3 15h5"/></svg><span>Ball</span></button>
-    <button data-cam="goal" title="Behind the net (4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19V7h18v12"/><path d="M3 11h18M3 15h18M9 7v12M15 7v12" opacity=".45"/></svg><span>Goal</span></button>
-    <button data-cam="taker" title="Watch the taker: run-up and strike (6)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="5.5" r="2.2"/><path d="M9 8.5 7.5 14l3 2.5L9 21M7.5 14 4 12M9.5 10l4 2"/><circle cx="18" cy="18" r="2.4"/></svg><span>Taker</span></button>
-    <button data-cam="keeper" title="Through the goalkeeper's eyes (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></svg><span>Keeper</span></button>
+  <div class="dk-group dk-screen">
+    <button id="btnPanels" class="dk-btn on" data-tip="Hide panels" data-key="H" aria-label="Hide or show the side panels" aria-pressed="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path class="l" d="M8.5 5v14"/><path class="r" d="M15.5 5v14"/></svg><span class="lbl">Hide panels</span>
+    </button>
+    <button id="btnClear" class="dk-btn" data-tip="Clear earlier kicks" data-key="X" aria-label="Clear the lines of earlier kicks" disabled>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3-8 8-11 16-12" stroke-dasharray="2.5 3"/><path d="M14.5 14.5l5 5M19.5 14.5l-5 5"/></svg>
+    </button>
   </div>
-  <span class="sep" aria-hidden="true"></span>
-  <button id="btnClear" class="labeled" title="Clear the lines of earlier kicks (X)" aria-label="Clear earlier kicks" disabled>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3-8 8-11 16-12" stroke-dasharray="3 3"/><path d="M14 14l6 6M20 14l-6 6"/></svg><span class="lbl">Clear</span>
-  </button>
-  <button id="btnReplay" class="icon" title="Replay (R)" aria-label="Replay" disabled>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4.5h4.5"/></svg>
-  </button>
-  <button id="btnKick" class="primary" title="Kick (Space)"><i class="prog" aria-hidden="true"></i><span class="lbl">Kick</span><kbd>Space</kbd></button>
-  <button id="btnPause" class="icon" title="Pause (P)" aria-label="Pause">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path class="pa" d="M8 5v14M16 5v14"/><path class="pl" d="M7 5l12 7-12 7z"/></svg>
-  </button>
-  <span class="sep" aria-hidden="true"></span>
-  <div class="seg slider" id="speeds" role="group" aria-label="Playback speed">
-    <button data-speed="1" class="on">1×</button>
-    <button data-speed="0.5">½×</button>
-    <button data-speed="0.25">¼×</button>
-    <button data-speed="0.1">⅒×</button>
+  <div class="dk-group dk-cams" id="cams" role="group" aria-label="Camera">
+    <button data-cam="kicker" class="dk-btn on" data-tip="Behind the ball" data-key="1" aria-label="Camera: behind the ball">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="5" r="2"/><path d="M8 8.5v5l-2.5 5.5M8 13.5l3.5 5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></button>
+    <button data-cam="broadcast" class="dk-btn" data-tip="TV camera" data-key="2" aria-label="Camera: TV broadcast">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="12" height="9" rx="2"/><path d="M15 10.5l5.5-3v8l-5.5-3"/><path d="M7 16l-2 4.5M11 16l2 4.5"/></svg></button>
+    <button data-cam="follow" class="dk-btn" data-tip="Chase the ball" data-key="3" aria-label="Camera: chase the ball">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="12" r="5.5"/><path d="M2.5 9h5M1.5 12h5M2.5 15h5"/></svg></button>
+    <button data-cam="goal" class="dk-btn" data-tip="Behind the net" data-key="4" aria-label="Camera: behind the net">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19.5V6h18v13.5"/><path class="net" d="M7.5 6v13.5M12 6v13.5M16.5 6v13.5M3 10.5h18M3 15h18"/></svg></button>
+    <button data-cam="keeper" class="dk-btn" data-tip="Keeper's eyes" data-key="5" aria-label="Camera: through the goalkeeper's eyes">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></svg></button>
   </div>
+  <button id="btnKick" class="primary"><i class="prog" aria-hidden="true"></i><span class="lbl">Kick</span><kbd>Space</kbd></button>
+  <div class="dk-group dk-replay">
+    <button id="btnReplay" class="dk-btn" data-tip="Replay" data-key="R" aria-label="Replay" disabled>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4.5h4.5"/></svg></button>
+    <button id="btnPause" class="dk-btn" data-tip="Pause" data-key="P" aria-label="Pause">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="pa" d="M8.5 5.5v13M15.5 5.5v13"/><path class="pl" d="M7.5 5.5l11 6.5-11 6.5z"/></svg></button>
+    <div id="speeds" class="dk-speeds" role="group" aria-label="Playback speed">
+      <button data-speed="1" class="on" aria-label="Normal speed">1×</button>
+      <button data-speed="0.5" aria-label="Half speed">½</button>
+      <button data-speed="0.25" aria-label="Quarter speed">¼</button>
+      <button data-speed="0.1" aria-label="One tenth speed">⅒</button>
+    </div>
+  </div>
+  <button id="dockFold" class="dk-btn dk-fold" data-tip="Fold the bar" data-key="B" aria-label="Fold or unfold the control bar" aria-expanded="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10l4 4 4-4"/></svg></button>
 </footer>
 
 <div id="toast" hidden></div>
 
 <div id="ballShow" hidden>
   <div class="bs-backdrop"></div>
-  <section class="bs-card" role="dialog" aria-modal="true" aria-labelledby="bsName">
-    <div class="bs-stage">
-      <canvas id="bsCanvas" aria-label="The ball in 3D: drag to turn it"></canvas>
-      <p class="bs-hint">Drag to turn the ball</p>
-    </div>
-    <div class="bs-info">
+  <!-- the ball as a map: the ball in the middle, its facts around it on leader lines; click a fact for a picture,
+       click (or hover) the ball for its anatomy: the panels come apart, with what each layer does -->
+  <section class="bs-card bs-mapcard" role="dialog" aria-modal="true" aria-labelledby="bsName">
+    <div class="bs-aurora" aria-hidden="true"></div>
+    <header class="bs-head">
+      <div class="bs-title"><p class="bs-kicker" id="bsMeta"></p><h2 id="bsName"></h2></div>
       <div class="seg" id="bsTabs" role="tablist" aria-label="Ball"></div>
-      <p class="bs-kicker" id="bsMeta"></p>
-      <h2 id="bsName"></h2>
-      <ul id="bsFacts"></ul>
-      <div class="bs-actions"><button class="primary" id="bsUse">Play with this ball</button><span id="bsUsing" hidden>In play</span></div>
+    </header>
+    <div class="bs-map" id="bsMap">
+      <svg class="bs-lines" id="bsLines" aria-hidden="true"></svg>
+      <div class="bs-stage" id="bsStage">
+        <canvas id="bsCanvas" aria-label="The ball in 3D: drag to turn it, click it for its anatomy"></canvas>
+        <button id="bsAnat" class="bs-anat" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4M5.3 5.3l2.8 2.8M15.9 15.9l2.8 2.8M18.7 5.3l-2.8 2.8M8.1 15.9l-2.8 2.8"/></svg>Anatomy</button>
+        <button id="bsBack" class="bs-back" type="button" hidden aria-label="Put the ball back together" title="Put it back together"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      </div>
+      <div class="bs-callouts" id="bsCallouts"></div>
+      <p class="bs-hint" id="bsHint">Drag to turn · click the ball for its anatomy · click a fact for a picture</p>
+    </div>
+    <footer class="bs-actions"><button class="primary" id="bsUse">Play with this ball</button><span id="bsUsing" hidden>In play</span></footer>
+    <div class="bs-detail" id="bsDetail" hidden>
+      <figure><img id="bsImg" alt=""><figcaption id="bsCap"></figcaption></figure>
+      <div class="bs-dtext"><p class="bs-kicker" id="bsDKick"></p><h3 id="bsDTitle"></h3><p id="bsDText"></p></div>
+      <button id="bsDClose" class="icon" aria-label="Close the picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <button id="bsClose" class="icon" title="Close (Esc)" aria-label="Close">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
@@ -290,10 +309,11 @@
     <tr><td><kbd>A</kbd> <kbd>D</kbd></td><td>Curl left / right</td></tr>
     <tr><td><kbd>Q</kbd> <kbd>E</kbd></td><td>Backspin / topspin</td></tr>
     <tr><td>Drag on the pitch</td><td>Aim (Kicker camera) or orbit (Orbit camera)</td></tr>
-    <tr><td><kbd>1</kbd>–<kbd>6</kbd></td><td>Cameras: behind the ball, TV, chase the ball, behind the goal, the keeper's eyes, the taker</td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>5</kbd></td><td>Cameras: behind the ball, TV, chase the ball, behind the goal, the keeper's eyes</td></tr>
     <tr><td><kbd>R</kbd> <kbd>P</kbd> <kbd>M</kbd> <kbd>H</kbd></td><td>Replay, pause, mute, hide panels</td></tr>
     <tr><td><kbd>C</kbd></td><td>Goal celebrations on / off</td></tr>
     <tr><td><kbd>X</kbd></td><td>Clear the lines of earlier kicks</td></tr>
+    <tr><td><kbd>B</kbd></td><td>Fold or unfold the control bar</td></tr>
   </table>
   <p>Drag the ball on the position map to move the free kick. Click the goal-face chart to have the simulator solve the aim for that spot with your current speed and spin.</p>
   <form method="dialog"><button class="primary">Close</button></form>
@@ -313,9 +333,11 @@
 <script src="js/app.js"></script>
 <script src="assets/balls/manifest.js"></script>
 <script src="js/ballview.js"></script>
+<script src="js/backdrop.js"></script>
 <script src="js/showcase.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/story.js"></script>
+<script src="js/dock.js"></script>
 <script src="js/labs.js"></script>
 </body>
 </html>

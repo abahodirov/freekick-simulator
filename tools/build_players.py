@@ -257,16 +257,24 @@ PLAYERS = {
     'keeper':     (macro(0.8, 0.42, 0.9, 0.85, R(0.9, 0.05, 0.05)), face(head_rect=0.3, chin_prominent=0.3, chin_width=0.3, nose_long=0.2, neck_thick=0.4)),
     # stage 35 (added last, so every earlier player builds exactly as before): Payet, 1.75 m, stocky
     'payet':      (macro(0.84, 0.42, 0.38, 0.7, R(0.72, 0.28, 0.0)), face(head_round=0.35, chin_width=0.4, cheek_volume=0.25, nose_wide=0.2, nose_hump=0.2, brows_down=0.3, neck_thick=0.6)),
+    # stage 39 (added last again, so everyone above builds exactly as before): Toni Kroos, 1.83 m, lean, long oval face;
+    # Marco Reus (who stopped the ball for him against Sweden), 1.80 m, lean, high cheekbones
+    'kroos':      (macro(0.66, 0.3, 0.68, 0.8, R(1.0, 0.0, 0.0)), face(head_oval=0.45, head_long=0.3, nose_long=0.3, nose_point_wide=-0.2, cheek_volume=-0.3, chin_prominent=0.2, eyes_narrow=0.2)),
+    'reus':       (macro(0.72, 0.3, 0.62, 0.8, R(1.0, 0.0, 0.0)), face(head_oval=0.3, chin_prominent=0.3, cheekbones=0.45, nose_long=0.15, cheek_volume=-0.35, eyes_narrow=0.1)),
 }
+# stage 39: Koeman, Mihajlovic and Nakamura are no longer takers. They are still built (so the random draws for the
+# players after them are unchanged) but not written out.
+SKIP = {'koeman', 'mihajlovic', 'nakamura'}
 # stage 26: the named players' MakeHuman face shapes at 1.4× (clipped to the target range), for a stronger likeness
-for _pid in ('ronaldo', 'messi', 'carlos', 'beckham', 'pirlo', 'juninho', 'ronaldinho', 'koeman', 'mihajlovic', 'nakamura', 'bale', 'payet'):
+for _pid in ('ronaldo', 'messi', 'carlos', 'beckham', 'pirlo', 'juninho', 'ronaldinho', 'koeman', 'mihajlovic', 'nakamura', 'bale', 'payet', 'kroos', 'reus'):
     _m, _f = PLAYERS[_pid]
     PLAYERS[_pid] = (_m, {k_: float(np.clip(v_ * 1.4, -1, 1)) for k_, v_ in _f.items()})
 # hair: (style keys, scalp-hair thickness scale, beard thickness in metres)
 ALLKEYS = ['hair_parted', 'hair_buzzed', 'hair_slick', 'hair_long', 'bun', 'beard']   # every player carries every shell (small)
 STYLE = {'ronaldo': (ALLKEYS, 1.1, 0), 'messi': (ALLKEYS, 1, 0.0046), 'carlos': (ALLKEYS, 0, 0), 'beckham': (ALLKEYS, 1.15, 0), 'pirlo': (ALLKEYS, 1, 0.004),
          'juninho': (ALLKEYS, 1, 0), 'ronaldinho': (ALLKEYS, 1.1, 0), 'koeman': (ALLKEYS, 1, 0), 'mihajlovic': (ALLKEYS, 1, 0),
-         'nakamura': (ALLKEYS, 1, 0), 'bale': (ALLKEYS, 1, 0.0042), 'payet': (ALLKEYS, 0.9, 0.0058)}
+         'nakamura': (ALLKEYS, 1, 0), 'bale': (ALLKEYS, 1, 0.0042), 'payet': (ALLKEYS, 0.9, 0.0058),
+         'kroos': (ALLKEYS, 1.0, 0), 'reus': (ALLKEYS, 1.05, 0.0026)}
 ALLH = (ALLKEYS, 1.0, 0.0034)
 HEAD_K = 0.07          # stylized proportions: heads 7 % bigger (blended by the head-bone weight, so the neck stays smooth)
 
@@ -464,7 +472,8 @@ LOOK = {'ronaldo': ('h_short02', 'brows_thick', 'light2'), 'messi': ('h_short04'
         'nakamura': ('h_bob02', 'brows', 'asian'), 'bale': ('h_ponytail01', 'brows', 'light'),
         'wall0': ('h_short02', 'brows_thick', 'light2'), 'wall1': (None, 'brows', 'dark'), 'wall2': ('h_short01', 'brows', 'light2'),
         'wall3': (None, 'brows_thick', 'dark'), 'wall4': ('h_bob02', 'brows', 'light'), 'wall5': (None, 'brows', 'dark'),
-        'keeper': ('h_short04', 'brows_thick', 'light2'), 'payet': ('h_short02', 'brows_thick', 'light2')}
+        'keeper': ('h_short04', 'brows_thick', 'light2'), 'payet': ('h_short02', 'brows_thick', 'light2'),
+        'kroos': ('h_short01', 'brows', 'light'), 'reus': ('h_short02', 'brows', 'light')}
 # ───────────── likeness: per-player face sculpting beyond the MakeHuman targets (stylized, caricature-leaning) ─────────────
 # ears, jaw width, face length, eye size, lip push, brow ridge, cheek width, nose size, chin push — soft regional
 # deformations around landmarks found on each player's own head. Values are approximations from public photos.
@@ -482,6 +491,8 @@ FACE = {
     'nakamura':   dict(face_long=1.08, jaw=0.9, eyes=0.9, nose=0.9),
     'bale':       dict(ears=1.5, face_long=1.12, nose=1.1, chin_fwd=0.005, jaw=1.04),                           # ears, long face
     'payet':      dict(jaw=1.12, cheeks=1.07, face_long=0.97, brow=0.006, eyes=0.95, nose=1.06),             # broad jaw under the beard, heavy brow
+    'kroos':      dict(face_long=1.12, nose=1.08, cheeks=0.93, eyes=0.95, chin_fwd=0.004),                    # long face, straight nose, lean cheeks
+    'reus':       dict(face_long=1.06, cheeks=0.92, chin_fwd=0.006, jaw=1.03, brow=0.003),                   # lean, defined chin
 }
 # per-player hair shaping on the scalp shells: quiff (m, front-top), fringe (m, over the forehead), sides (thickness
 # kept on the lower sides: < 1 = faded), vol (overall thickness)
@@ -492,10 +503,11 @@ HAIRMOD = {
     'beckham': dict(vol=1.45, sides=0.9, fringe=0.016, part=0.015),
     'koeman': dict(fringe=0.01, vol=1.15), 'pirlo': dict(vol=1.25), 'ronaldinho': dict(vol=1.35, locks=0.9),
     'nakamura': dict(fringe=0.016, vol=1.2), 'payet': dict(sides=0.3, vol=1.0, fringe=0.006),
+    'kroos': dict(part=0.01, sides=0.5, vol=1.15, fringe=0.004), 'reus': dict(quiff=0.018, sides=0.35),
 }
 # eyebrow weight (0.5 = medium): thin and groomed … heavy
 BROWW = {'ronaldo': 0.36, 'messi': 0.5, 'carlos': 0.6, 'beckham': 0.5, 'pirlo': 0.6, 'juninho': 0.5, 'ronaldinho': 0.55,
-         'koeman': 0.4, 'mihajlovic': 0.66, 'nakamura': 0.56, 'bale': 0.48, 'payet': 0.64}
+         'koeman': 0.4, 'mihajlovic': 0.66, 'nakamura': 0.56, 'bale': 0.48, 'payet': 0.64, 'kroos': 0.42, 'reus': 0.45}
 def sculpt_face(P, ops):
     if not ops: return P
     P = P.copy()
@@ -661,6 +673,7 @@ shapes = {}
 for pid, (mac, fac) in PLAYERS.items():
     spec = dict(mac); spec.update(fac)
     P, JP, eyes, hair = build(pid, spec, keeper=(pid == 'keeper'))
+    if pid in SKIP: continue
     shapes[pid] = {'pos': i16(P[bodyV]), 'joints': [round(float(x), 5) for x in JP.ravel()], 'eyes': [round(float(x), 5) for x in eyes],
                    'hair': {k: i16(v) for k, v in hair.items()}, 'height': round(float(P[body_set, 1].max()), 4),
                    'browW': BROWW.get(pid, 0.5),

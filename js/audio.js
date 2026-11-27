@@ -152,22 +152,21 @@
      * brighter the faster it turns, over a quiet airy whirr that follows the speed.
      */
     spin(dAngle, speed) {
+      // turning the ball (or aiming) by hand: a soft rush of air with a quiet warm tone under it, both rising gently
+      // with the speed and easing in and out (no clicks)
       if (!ensure()) return;
-      spinAcc += Math.abs(dAngle);
-      const step = 0.2;                                        // a click every ~11°
-      if (spinAcc >= step) {
-        spinAcc %= step;
-        tick(900 + Math.min(900, Math.abs(speed) * 90), Math.min(0.07, 0.02 + Math.abs(speed) * 0.006));
-      }
       if (!whirr) {
         const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-        s.buffer = noiseBuf; s.loop = true; f.type = 'bandpass'; f.Q.value = 3; f.frequency.value = 400; g.gain.value = 0;
-        s.connect(f); f.connect(g); g.connect(ui()); s.start();
-        whirr = { f, g };
+        s.buffer = noiseBuf; s.loop = true; f.type = 'lowpass'; f.Q.value = 0.4; f.frequency.value = 400; g.gain.value = 0;
+        const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine'; o.frequency.value = 196; og.gain.value = 0;
+        s.connect(f); f.connect(g); g.connect(ui()); o.connect(og); og.connect(ui()); s.start(); o.start();
+        whirr = { f, g, o, og };
       }
-      const sp = Math.min(1, Math.abs(speed) / 10), t = ctx.currentTime;
-      whirr.g.gain.setTargetAtTime(0.03 * sp, t, 0.05); whirr.f.frequency.setTargetAtTime(300 + 1500 * sp, t, 0.05);
-      clearTimeout(whirrOff); whirrOff = setTimeout(() => { if (whirr) whirr.g.gain.setTargetAtTime(0, ctx.currentTime, 0.12); }, 90);
+      const sp = Math.min(1, Math.abs(speed) / 12), t = ctx.currentTime;
+      whirr.g.gain.setTargetAtTime(0.02 * Math.sqrt(sp), t, 0.12); whirr.f.frequency.setTargetAtTime(350 + 1100 * sp, t, 0.15);
+      whirr.og.gain.setTargetAtTime(0.006 * sp, t, 0.15); whirr.o.frequency.setTargetAtTime(196 + 90 * sp, t, 0.2);
+      clearTimeout(whirrOff);
+      whirrOff = setTimeout(() => { if (!whirr) return; const n = ctx.currentTime; whirr.g.gain.setTargetAtTime(0, n, 0.35); whirr.og.gain.setTargetAtTime(0, n, 0.35); }, 110);
     },
     /** The crowd's murmur under everything (stadium look): level 0 … 1. */
     crowd(levelNow) {
@@ -199,7 +198,7 @@
     if (!b || b.disabled) return;
     const id = b.id;
     if (id === 'logoBall') return Sound.ui('open');
-    if (id === 'bsClose') return Sound.ui('close');
+    if (id === 'bsClose') return;                               // (the showcase plays its own close)
     if (id === 'bsUse') return Sound.ui('success');
     if (id === 'btnKick') return Sound.ui('kick');
     if (id === 'btnReplay') return Sound.ui('replay');

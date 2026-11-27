@@ -22,7 +22,8 @@ test('the engine default ball changes nothing (bit-for-bit identical flight)', (
 test('every measured ball cites a source and has both panel orientations', () => {
   for (const b of B.BALLS) {
     ok(b.source && /^https?:\/\//.test(b.source.url), `${b.id}: no source`);
-    if (b.tag === 'measured') ok(b.orient.A && b.orient.B, `${b.id}: orientations`);
+    // (Hong & Asai measured two panel orientations of every ball; the 2026 study gives one for most balls)
+    if (b.tag === 'measured' && b.source === B.SOURCES.HONG_ASAI) ok(b.orient.A && b.orient.B, `${b.id}: orientations`);
   }
 });
 test('a later drag crisis (Jabulani) means more drag at 20 m/s than an earlier one (Brazuca)', () => {
@@ -37,6 +38,20 @@ test('ball choice moves the crossing point of an identical kick (and the run is 
   ok(Math.max(...zs) - Math.min(...zs) > 0.05, 'balls make no difference: ' + zs.join(','));
   const again = (() => { const x = FK.cloneConfig(c); x.aero = B.aeroFor('jabulani', 'A', FK.AERO_DEFAULT); return FK.simulateFlight(x, { knuckle: false }).crossing.z; })();
   ok(again === zs[2], 'not deterministic');
+});
+
+test('every ball model in the manifest is a ball in the lab, with a sphere map and a groove (normal) map', () => {
+  const fs = require('fs'), path = require('path'), vm = require('vm'), dir = path.join(__dirname, '..', 'assets', 'balls');
+  const ctx = { self: {} }; vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(dir, 'manifest.js'), 'utf8'), ctx);
+  ok(Array.isArray(ctx.self.FKBallManifest) && ctx.self.FKBallManifest.length >= 4, 'manifest');
+  for (const id of ctx.self.FKBallManifest) {
+    ok(B.BALLS.some((b) => b.id === id), `${id}: not in the ball list`);
+    vm.runInContext(fs.readFileSync(path.join(dir, id + '.js'), 'utf8'), ctx);
+    const m = ctx.self.FKBallModels[id];
+    ok(m && /^data:image\/jpeg;base64,/.test(m.sphereTexture || m.texture), `${id}: no sphere map`);
+    ok(/^data:image\/jpeg;base64,/.test(m.sphereNormal || ''), `${id}: no groove map`);
+  }
 });
 
 console.log('Historical exhibition');
@@ -57,7 +72,7 @@ test('every reconstruction reaches the goal mouth when aimed by the solver', () 
     const c = FK.defaultConfig(), r = k.recon;
     c.ball = FK.clampBallPosition(r.ball.x, r.ball.y); c.wall.count = 0; c.keeper.level = 'off';
     Object.assign(c.kick, { speed: r.kick.speed, sideSpin: r.kick.side, topSpin: r.kick.top, elevation: 15 });
-    const a = FK.solveAim(c, r.target.y, r.target.z); c.kick.azimuth = a.azimuth; c.kick.elevation = a.elevation;
+    const a = r.aim || FK.solveAim(c, r.target.y, r.target.z); c.kick.azimuth = a.azimuth; c.kick.elevation = a.elevation;
     const f = FK.simulateFlight(c, { knuckle: false });
     ok(f.crossing && Math.abs(f.crossing.y) < FK.C.GOAL_HALF_WIDTH && f.crossing.z < FK.C.GOAL_HEIGHT, `${k.id}: crosses at ${f.crossing && f.crossing.y.toFixed(2)}, ${f.crossing && f.crossing.z.toFixed(2)}`);
     // and the reconstruction distance agrees with the documented distance where one is given in metres or yards
@@ -71,7 +86,7 @@ test('every recreation has a keeper read under which the documented goal happens
     c.ball = FK.clampBallPosition(r.ball.x, r.ball.y); c.wall.count = r.wall; c.keeper.level = r.keeper;
     if (r.keeperPos) c.keeper.pos = r.keeperPos;
     Object.assign(c.kick, { speed: r.kick.speed, sideSpin: r.kick.side, topSpin: r.kick.top, elevation: 15 });
-    const a = FK.solveAim(c, r.target.y, r.target.z); c.kick.azimuth = a.azimuth; c.kick.elevation = a.elevation;
+    const a = r.aim || FK.solveAim(c, r.target.y, r.target.z); c.kick.azimuth = a.azimuth; c.kick.elevation = a.elevation;
     let found = null;
     for (let s = 0; s < 400 && found === null; s++) {
       const x = FK.cloneConfig(c); x.seed = 1009 + s * 7919;
