@@ -181,15 +181,21 @@
     shownAt = performance.now();
     requestAnimationFrame(layout);
   }
+  /** The ball's box in the map where it rests (offsets ignore the grow-from-the-logo transform, which made pills
+   *  placed during the opening land beside the logo instead of beside the ball). */
+  function restBox() {
+    const w = cv.offsetWidth, h = cv.offsetHeight;
+    return { width: w, height: h, cx: stage.offsetLeft + cv.offsetLeft + w / 2, cy: stage.offsetTop + cv.offsetTop + h / 2 };
+  }
   /** Place the pills in two columns beside the ball (the lines follow every frame, in tick()). */
   function layout() {
-    const mr = map.getBoundingClientRect(), cr = cv.getBoundingClientRect();
+    const mr = map.getBoundingClientRect(), cr = restBox();
     if (!mr.width || !cr.width) return;
     const narrow = mr.width < 760;
     map.classList.toggle('narrow', narrow);
     if (narrow) { pills.forEach((q) => { q.el.style.left = q.el.style.top = q.el.style.width = ''; }); return; }
     lines.setAttribute('viewBox', `0 0 ${mr.width} ${mr.height}`);
-    const cx = cr.left - mr.left + cr.width / 2, R0 = cr.width / 2 * 2.5 / 3.2;
+    const cx = cr.cx, R0 = cr.width / 2 * 2.5 / 3.2;
     const nL = Math.ceil(pills.length / 2), nR = pills.length - nL, colW = Math.max(180, Math.min(270, (mr.width - cr.width) / 2 - 40));
     pills.forEach((q, i) => {
       const left = i < nL, k = left ? i : i - nL, n = left ? nL : nR;
@@ -213,9 +219,9 @@
     // (the card and the ball are still growing in the first moments: keep placing the pills until they settle)
     if (now - shownAt < 1200 || !pills[0].w || !pills[0].el.style.left) layout();
     if (map.classList.contains('narrow')) return;
-    const mr = map.getBoundingClientRect(), cr = cv.getBoundingClientRect();
+    const cr = restBox();
     if (!cr.width) return;
-    const cx = cr.left - mr.left + cr.width / 2, cy = cr.top - mr.top + cr.height / 2;
+    const cx = cr.cx, cy = cr.cy;
     const ex = Math.max(0, big.explode), z = big.zoom / (1 + 0.5 * ex);
     const R = cr.width / 2 * z / 3.2 * (1 + 0.3 * ex);           // the edge of the ball, or of its cloud of panels
     for (const q of pills) {
@@ -250,14 +256,10 @@
     img.classList.remove('loaded'); img.onload = () => img.classList.add('loaded'); img.onerror = () => img.classList.add('failed');
     img.src = ph.local || photoUrl(ph.file); img.alt = ph.cap;
     img.style.objectPosition = ph.pos || '50% 40%';            // (the crop keeps the faces and the ball in the frame)
-    img.style.aspectRatio = ph.ar || '';                        // (a taller frame where face and ball are far apart:
-    img.style.width = ph.ar ? 'auto' : '';                      //  narrower, so it keeps its shape within the panel's height)
-    img.style.height = ph.ar ? '440px' : '';
-    capEl.textContent = ph.cap + ' · Photo: ' + (ph.by === 'unknown' ? '' : ph.by + ', ') + ph.lic + (ph.local ? '' : ', ');
-    if (!ph.local) {
-      const a = document.createElement('a'); a.href = pageUrl(ph.file); a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Wikimedia Commons';
-      capEl.append(a);
-    }
+    // the frame's shape (4:3, or taller where face and ball are far apart); CSS fits it inside the panel at any size
+    detail.style.setProperty('--ar', ph.ar || '4 / 3');
+    { const [w, h] = (ph.ar || '4 / 3').split('/').map(Number); detail.style.setProperty('--ar-n', (w / h).toFixed(4)); }
+    capEl.textContent = ph.cap;                                  // (what the photo shows; the sources are in assets/CREDITS.md)
     $('bsDKick').textContent = b.name; $('bsDTitle').textContent = f.t; $('bsDText').textContent = f.more || f.x;
     detail.hidden = false; requestAnimationFrame(() => detail.classList.add('shown'));
     if (window.FKSound) FKSound.ui('open');

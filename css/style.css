@@ -816,3 +816,17 @@ button.bs-call:hover { transform: translateY(-2px) scale(1.025); background: lin
 .bs-detail img { aspect-ratio: 4 / 3; max-height: none; width: 100%; object-fit: cover; border-radius: 22px; background: #111; }
 /* (a taller frame for a photo whose face and ball are far apart: kept to the panel's height) */
 .bs-detail img { max-height: 440px; margin: 0 auto; }
+
+/* stage 46: the photograph always fits inside the panel. The figure fills its grid cell (no taller than the panel); the
+   picture keeps its frame's shape (--ar) and shrinks to whichever of the cell's width or height runs out first */
+.bs-detail { overflow: hidden; align-items: stretch; }
+.bs-detail figure { min-height: 0; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.bs-detail figure img, .bs-detail img { flex: 0 1 auto; min-height: 0; width: auto; height: auto; max-width: 100%; max-height: 100%;
+  aspect-ratio: var(--ar, 4 / 3); object-fit: cover; margin: 0; border-radius: 22px; }
+.bs-detail figure img { width: 100%; }
+@supports (height: 1cqh) {
+  .bs-detail figure { container-type: size; }
+  .bs-detail figure img { width: min(100cqw, calc((100cqh - 30px) * var(--ar-n, 1.333))); max-height: calc(100cqh - 30px); }
+}
+.bs-detail figcaption { margin: 0; flex: none; max-width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bs-dtext { min-height: 0; overflow-y: auto; align-self: center; max-height: 100%; }
