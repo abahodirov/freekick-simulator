@@ -32,7 +32,7 @@ All nine suites (107 tests): `for t in tests/*.test.js; do node "$t"; done`
   Messi and Jonathan David striking it at the 2026 World Cup; the 2024-25 Champions League ball held up, in the
   warm-up, carried out as the match ball and caught by a keeper at Salzburg v Paris Saint-Germain and v Atlético Madrid.
 - **Euro 2024 stars**: Jude Bellingham with the Fussballliebe and Lamine Yamal's strike against France; Jamal Musiala
-  on the ball for Germany.
+  on the ball for Germany before the tournament.
 - **Champions League legends**: Zidane's volley (2002), Messi's header (2009) and Bale's overhead kick (2018) with the
   starball. Every photograph sits in the same rounded frame, cropped so the faces and the ball stay in shot.
 - **Smoother map lines**: each line draws from its fact to the ball, and its point appears only when the line arrives.

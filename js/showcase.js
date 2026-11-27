@@ -40,7 +40,7 @@
         { file: 'UEFA Euro 2024 Match Ball Fussballliebe.jpg', by: 'Bildersindtoll', lic: 'CC0', cap: 'A replica of the Fussballliebe' },
         { local: 'assets/showcase/euro-bellingham.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Jude Bellingham with the Fussballliebe', pos: '50% 40%', ar: '5 / 6' },
         { local: 'assets/showcase/euro-yamal-2024.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Lamine Yamal shoots for Spain against France, Euro 2024 semi-final, Munich', pos: '50% 18%' },
-        { local: 'assets/showcase/euro-musiala.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Jamal Musiala on the ball for Germany (a Nations League match, with its ball)', pos: '50% 100%', ar: '5 / 6' }],
+        { local: 'assets/showcase/euro-musiala.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Jamal Musiala with the Fussballliebe, Germany v Ukraine, June 2024', pos: '72% 50%' }],
       facts: [
         { ph: 1, t: 'Love of football', x: 'That is what "Fussballliebe" means.', more: '"Fussballliebe" is German for "love of football". Toni Kroos played his last tournament with it, at home in Germany.' },
         { ph: 0, t: 'Ten host cities', x: 'Each city\'s stadium is drawn on a panel.', more: 'Berlin, Cologne, Dortmund, Düsseldorf, Frankfurt, Gelsenkirchen, Hamburg, Leipzig, Munich and Stuttgart: their names and stadium outlines are printed on the panels.' },
