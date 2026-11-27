@@ -122,7 +122,7 @@
       line: 'Deep seams and grooves make it the "roughest" modern ball in the wind tunnel: very steady, but with the most drag at speed, so a hard-hit ball dies sooner and drops short.' },
     { id: 'euro24', name: 'Fussballliebe', year: 'Euro 2024', colour: '#d8a21c',
       line: 'Flies with the Al Rihla\'s measurements (the closest tested design): the steadiest of all, so a no-spin strike hardly wobbles.' },
-    { id: 'ucl', name: 'UCL starball', year: 'Champions League', colour: '#c7472a',
+    { id: 'ucl', name: 'UCL starball', year: 'Champions League', colour: '#4caf50',
       line: 'No wind-tunnel data has been published for any Champions League ball, so it flies like the Classic.' },
   ];
   let ballSel = 'jabulani';

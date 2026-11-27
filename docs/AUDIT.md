@@ -742,3 +742,38 @@ way) and `ball_bake.py` draws seams from the seam UV set and no longer stores th
 - **Ronaldo 2008:** a knuckleball now (0.15 rev/s topspin, 27.5 m/s, aimed at 2.85 m, 2.15 m): with no spin it wobbles
   (about 0.3 m at the line) and dips through its drag crisis into the top right corner; 17 of 30 keeper reads score
   cleanly and the exhibition picks one. At the old 31 m/s with no topspin it hit the wall almost every time.
+
+## 40. Stage 43: the Jabulani as built, the starball in 2024-25 colours
+
+- **Jabulani panels** (`tools/ball_panels_jabulani.py`, rewritten): its tripod seams are printed in the colour map as
+  thin grey lines on the white skin. A black top-hat (5 px closing minus the image) on the white areas finds them.
+  The four large non-white regions are the coloured graphics; each with the white middle it surrounds is a triangle
+  panel; the white skin left over, cut along the seams, gives the four tripods. All eight come out at 12.3-12.9 % of
+  the sphere (the Jabulani's panels are of equal area).
+- **Starball** (`tools/ball_ucl_recolour.py`): the printed ground (the ground panel pieces) is recoloured dark
+  charcoal with a faint texture, a darker shade along each star's groove and a thin green trace 7-8 px outside it, in
+  the style of the 2024-25 match ball the owner supplied a picture of; its background is now a green Plasma.
+
+## 41. Stage 44: the starball in detail, one panel per dark star; one ball on screen
+
+- **Starball** (`tools/ball_ucl_detail.py`): the dark ground is one net of stars joined at their tips; eroded two
+  pixels it falls into 12 cores, which grow back over the ground, so each dark star is one panel (20 white + 12
+  dark; the earlier split under each white star cut every dark star into five). Colour as the 2024-25 ball: charcoal
+  with a faint mottle, a green trace 8 px inside each star edge and a fainter one at 24 px, shade in every groove;
+  white panels keep their print, with a pale embossed outline 17 px inside the edge and three short red strokes in a
+  Y round the centre (not on the panels with logos). Relief: a groove along every panel edge (including where dark
+  stars touch), a gentle dome per panel, shallow grooves along the inner outlines, a fine pebble on the white skin.
+- **Trionda:** its four panels travel 1.35x as far as the others when the ball comes apart (they overlapped).
+- **One ball on screen:** the corner logo is hidden while the showcase is open; the ball flying home lands and
+  becomes the logo (same ball, same turn), with no second ball waiting in the corner.
+- **Turning sound:** quieter and more musical: band-limited air (high-passed, no rumble) and a soft pad of two tones
+  a fifth apart (E4 and B4) that brighten a little with speed; no clicks.
+
+## 42. Stage 45: photographs that show the ball, more room when the balls come apart
+
+- **Photographs:** only Commons files at least 1600 px wide, loaded at 1600 px, each one checked by eye to show the
+  ball; one per fact, none twice (16). Ronaldo, the fan zones and the wide stadium shots are gone. Free photographs
+  of the Fussballliebe in play do not exist on Commons (every Euro 2024 match photo there is of the crowd), so three
+  of its facts, and one of the Classic's, open as text only rather than with a picture that does not show the ball.
+- **Trionda** panels travel 1.6x as far as the others when the ball comes apart (was 1.35x); the starball's dark
+  stars travel 0.8x as far as its white panels (was 0.45x), so they stand clear of the core.

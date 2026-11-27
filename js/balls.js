@@ -50,7 +50,7 @@
       // Al Rihla had the smallest unsteady side and lift forces in that study: a weaker wobble (model value)
       knuckle: { knCl: 0.08, knSpin: 0.055, knFreq: 0.9, knTrans: 0 } },
     { id: 'ucl', name: 'Adidas UCL starball', year: null, panels: 20, look: 'ucl',
-      note: 'A Champions League match ball: white star panels on a printed ground. No wind-tunnel figures have been published for any Champions League ball, so it flies like the Classic (the engine\'s measured fit) rather than with invented numbers.',
+      note: 'A Champions League match ball in the style of 2024–25: white panels and dark charcoal stars traced in green. No wind-tunnel figures have been published for any Champions League ball, so it flies like the Classic (the engine\'s measured fit) rather than with invented numbers.',
       orient: { A: { reCrit: 1.78e5, cdSuper: 0.155 } }, tag: 'engine', source: GOFF_CARRE },
   ];
 

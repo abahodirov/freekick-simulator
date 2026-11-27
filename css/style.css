@@ -809,3 +809,6 @@ button.bs-call:hover { transform: translateY(-2px) scale(1.025); background: lin
 #ballShow.closing .bs-mapcard > :not(.bs-map), #ballShow.closing .bs-map > :not(.bs-stage), #ballShow.closing .bs-stage > button {
   opacity: 0; filter: blur(6px); transform: scale(.97); transition: opacity .45s ease, filter .45s ease, transform .5s cubic-bezier(.4, 0, .2, 1); }
 #ballShow.closing .bs-stage::before { opacity: 0; transition: opacity .3s; }
+/* a fact with no photograph: the story alone, centred */
+.bs-detail.nophoto { grid-template-columns: 1fr; max-width: 620px; margin: 0 auto; inset: 150px 26px 140px; }
+.bs-detail.nophoto figure { display: none; }

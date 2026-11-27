@@ -152,21 +152,26 @@
      * brighter the faster it turns, over a quiet airy whirr that follows the speed.
      */
     spin(dAngle, speed) {
-      // turning the ball (or aiming) by hand: a soft rush of air with a quiet warm tone under it, both rising gently
-      // with the speed and easing in and out (no clicks)
+      // turning the ball (or aiming) by hand: a quiet, airy swish (band-limited noise, no rumble, no clicks) over a calm
+      // pad of two soft tones a fifth apart, both brightening a little with the speed and easing in and out
       if (!ensure()) return;
       if (!whirr) {
-        const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-        s.buffer = noiseBuf; s.loop = true; f.type = 'lowpass'; f.Q.value = 0.4; f.frequency.value = 400; g.gain.value = 0;
-        const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine'; o.frequency.value = 196; og.gain.value = 0;
-        s.connect(f); f.connect(g); g.connect(ui()); o.connect(og); og.connect(ui()); s.start(); o.start();
-        whirr = { f, g, o, og };
+        const s = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+        s.buffer = noiseBuf; s.loop = true; hp.type = 'highpass'; hp.frequency.value = 280;
+        f.type = 'bandpass'; f.Q.value = 0.7; f.frequency.value = 900; g.gain.value = 0;
+        s.connect(hp); hp.connect(f); f.connect(g); g.connect(ui()); s.start();
+        const pad = ctx.createGain(), lp = ctx.createBiquadFilter(); pad.gain.value = 0; lp.type = 'lowpass'; lp.frequency.value = 1400;
+        const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(); o1.type = 'sine'; o2.type = 'triangle';
+        o1.frequency.value = 329.6; o2.frequency.value = 494; o1.connect(lp); o2.connect(lp); lp.connect(pad); pad.connect(ui()); o1.start(); o2.start();
+        whirr = { f, g, pad, o1, o2 };
       }
       const sp = Math.min(1, Math.abs(speed) / 12), t = ctx.currentTime;
-      whirr.g.gain.setTargetAtTime(0.02 * Math.sqrt(sp), t, 0.12); whirr.f.frequency.setTargetAtTime(350 + 1100 * sp, t, 0.15);
-      whirr.og.gain.setTargetAtTime(0.006 * sp, t, 0.15); whirr.o.frequency.setTargetAtTime(196 + 90 * sp, t, 0.2);
+      whirr.g.gain.setTargetAtTime(0.016 * Math.pow(sp, 0.8), t, 0.09);
+      whirr.f.frequency.setTargetAtTime(800 + 1000 * sp, t, 0.15);
+      whirr.pad.gain.setTargetAtTime(0.0045 * Math.min(1, sp * 1.6), t, 0.2);
+      whirr.o1.frequency.setTargetAtTime(329.6 * (1 + 0.06 * sp), t, 0.3); whirr.o2.frequency.setTargetAtTime(494 * (1 + 0.06 * sp), t, 0.3);
       clearTimeout(whirrOff);
-      whirrOff = setTimeout(() => { if (!whirr) return; const n = ctx.currentTime; whirr.g.gain.setTargetAtTime(0, n, 0.35); whirr.og.gain.setTargetAtTime(0, n, 0.35); }, 110);
+      whirrOff = setTimeout(() => { if (!whirr) return; const n = ctx.currentTime; whirr.g.gain.setTargetAtTime(0, n, 0.3); whirr.pad.gain.setTargetAtTime(0, n, 0.45); }, 120);
     },
     /** The crowd's murmur under everything (stadium look): level 0 … 1. */
     crowd(levelNow) {

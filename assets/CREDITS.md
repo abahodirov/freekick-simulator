@@ -67,24 +67,25 @@ FBX → `assets/balls/<id>.js`, textures downsized to 2048 px JPEG) and baked on
 The ball designs themselves belong to adidas.
 
 Panel maps for the showcase's exploded view (`tools/ball_panels.py`): the Trionda's 4 and the Fussballliebe's 20
-panels are the texture islands of their models; the starball's stars come from its grooves; the Jabulani's 8 are
-approximated on the corners of a cube from its ring graphics (`tools/ball_panels_jabulani.py`: its seams are too faint
-to trace); the starball's printed ground is split under its stars (`tools/ball_panels_ucl_ground.py`); the Classic's 32
-are its geometry.
+panels are the texture islands of their models; the starball's stars come from its grooves; the Jabulani's 8 (4 triangle
+panels, each a coloured graphic with its white middle, and 4 tripods, as in adidas's cutaway) follow the seams printed
+as thin grey lines in its colour map (`tools/ball_panels_jabulani.py`); the starball's printed ground is split under its
+stars (`tools/ball_panels_ucl_ground.py`) and recoloured in the style of the 2024-25 ball, dark charcoal stars traced in
+green, one panel per dark star, with its grooves and print (`tools/ball_ucl_recolour.py`, `tools/ball_ucl_detail.py`); the Classic's 32 are its geometry.
 
 ## Showcase photographs
 
-Loaded from Wikimedia Commons at run time (not shipped), one per fact, credited under each picture:
-- 2026 World Cup (Trionda): Lionel Messi, Argentina v Egypt; Cristiano Ronaldo, Croatia v Portugal; Kylian Mbappé,
-  France v Morocco: Bryan Berlin, CC BY-SA 4.0. The Trionda in Toronto: OhanaUnited, CC BY-SA 4.0.
-- Euro 2024 (Fussballliebe): Hamburg fan zone, Frank Schwichtenberg, CC BY-SA 4.0; opening match, Monthejags, CC0;
-  replica ball, Bildersindtoll, CC0; Lamine Yamal, La Moncloa (attribution).
-- Champions League: 2021–22 balls, Ararat Trvants (CC0) and Vyacheslav Evdokimov (CC BY-SA 3.0); Finale 19, No Swan So
-  Fine, CC BY-SA 4.0; RB Leipzig v Tottenham 2020, Steffen Prößdorf, CC BY-SA 4.0.
-- 2010 World Cup (Jabulani): the ball, Shawn Smith, CC BY 2.0; Brazil training, Marcello Casal Jr / Agência Brasil,
-  CC BY 3.0 BR; Netherlands v Uruguay, Jimmy Baikovicius, CC BY-SA 2.0; Uruguay v France, Warren Rohner, CC BY-SA 2.0.
-- 1970 (Classic): the Telstar, Zac Allan, public domain; Pelé scoring against Czechoslovakia (UPI) and celebrating
-  (AP), public domain; the Telstar Durlast, shine2010, CC BY 2.0.
+Loaded from Wikimedia Commons at run time (not shipped), at 1600 px, each showing the ball, one per fact and none
+twice, credited under each picture. Where no free photograph of a ball could be found, the fact shows text only.
+- Trionda: in Toronto, OhanaUnited, CC BY-SA 4.0; on the pitch at France v Senegal, Lionel Messi (Argentina v Egypt)
+  and Kylian Mbappé (France v Morocco) at the 2026 World Cup, Bryan Berlin, CC BY-SA 4.0.
+- Fussballliebe: a replica, Bildersindtoll, CC0 (the only free photograph of the ball found).
+- Champions League: a 2021-22 ball, Ararat Trvants, CC0; the 2009 and 2011 final balls, PeeJay2K3, CC BY-SA 3.0; the
+  Finale 19, No Swan So Fine, CC BY-SA 4.0.
+- Jabulani: on the shelf and with Germany's kit, BrokenSphere, CC BY-SA 3.0; Brazil training in Soweto, Marcello
+  Casal Jr / Agência Brasil, CC BY 3.0 BR; the Jo'bulani, warrenski, CC BY-SA 2.0.
+- Classic: the 1970 Telstar, Zac Allan, public domain; giant Telstars in Berlin, Times, CC BY-SA 3.0; the 1974 Telstar
+  Durlast, Haeferl, CC BY-SA 3.0.
 
 `assets/showcase/trionda-sensor.webp` (the Trionda's sensor module out of its panel) was supplied by the project owner;
 it appears to be an adidas product photograph.

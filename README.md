@@ -26,6 +26,17 @@ No install, no build step, no dependencies.
 **Check the physics:** `node tests/physics.test.js` — 29 tests against conservation laws and closed-form results.
 All nine suites (107 tests): `for t in tests/*.test.js; do node "$t"; done`
 
+## What's new in v2.0.4
+
+- **The Jabulani comes apart as it was built**: its 4 triangle panels (each coloured graphic with its white middle)
+  and 4 white tripods, cut along the seams printed in its own texture.
+- **A detailed Champions League ball** in the style of 2024-25: white panels and dark charcoal stars traced in green,
+  each dark star one panel, grooves along every edge, domed panels, embossed outlines and red marks.
+- **More room when a ball comes apart** (the Trionda's big panels no longer overlap; the starball's stars stand clear).
+- **One ball on screen**: the corner logo is empty while the showcase is open, and the ball flying home becomes it.
+- **Sharper photographs that always show the ball**, one per fact.
+- **A softer sound** for turning the ball: airy and musical, no clicks.
+
 ## What's new in v2.0.3
 
 - **Free kicks recreated from the footage.** Every exhibit was checked frame by frame against broadcast replays (main
@@ -42,11 +53,12 @@ All nine suites (107 tests): `for t in tests/*.test.js; do node "$t"; done`
   its wild knuckle; the Classic is the reference; no data exists for a Champions League ball, so it flies like the
   Classic.
 - **The ball showcase is a map.** The ball sits in the middle with its facts around it on straight callout lines;
-  click a fact for a real photograph (Wikimedia Commons, credited; a different one for every fact: Messi, Mbappé and
-  Ronaldo with the Trionda at the 2026 World Cup, Pelé in 1970, the 2010 World Cup, the balls themselves). Hover or
+  click a fact for a real photograph (Wikimedia Commons, credited; sharp, always showing the ball, a different one for
+  every fact: Messi and Mbappé with the Trionda at the 2026 World Cup, the final balls of the Champions League, the
+  Jabulani and the Telstar). Hover or
   click the ball for **Anatomy**: it comes apart into its panels around its dark core (4 for the Trionda, 20 for the
-  Fussballliebe, 8 for the Jabulani, 32 for the Classic; the starball's stars float out over the pieces of its printed
-  ground), with only what each part is; the round U-turn arrow puts it together. Closing it, the ball spins and flies
+  Fussballliebe, the Jabulani's 4 triangle and 4 tripod panels, 32 for the Classic; the starball, now in the 2024-25
+  style with dark stars traced in green, comes apart into its white panels and dark stars), with only what each part is; the round U-turn arrow puts it together. Closing it, the ball spins and flies
   home into the logo. The facts are frosted-glass pills, and behind it all a living background in the ball's colours:
   React Bits' Aurora (Trionda, Fussballliebe, Jabulani, Classic) or Plasma (starball). Turning the ball by hand makes a
   soft rush of air instead of clicks.

@@ -357,9 +357,10 @@
         const n = panels.length;
         panels.forEach((pn, k) => {
           const s = 0.25 * k / Math.max(1, n - 1), e = Math.max(0, Math.min(1.2, (ex - s) / (1 - 0.25)));
-          // (a starball's printed ground comes off in pieces too, but only part of the way: its stars float above it)
+          // (a starball's dark stars come off a little less far than its white panels, so the two layers read apart)
           const inner = model && model.inner !== undefined && pn.id >= model.inner;
-          const ee = e * e * (3 - 2 * Math.min(1, e)), d = 0.42 * ee * (inner ? 0.45 : 1);
+          // (the Trionda's four big curved panels need a little more room, or they overlap)
+          const ee = e * e * (3 - 2 * Math.min(1, e)), d = 0.42 * ee * (inner ? 0.8 : 1) * (this.ball === 'trionda' ? 1.6 : 1);
           gl.uniform1i(this.u.uPanel, pn.id); gl.uniform3f(this.u.uOff, pn.c[0] * d, pn.c[1] * d, pn.c[2] * d); draw();
         });
         gl.uniform3f(this.u.uOff, 0, 0, 0);

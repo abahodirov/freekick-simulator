@@ -20,9 +20,9 @@
   const SHOW = [
     { id: 'trionda', name: 'Trionda', meta: 'FIFA World Cup 2026 · Canada, Mexico, USA', photos: [
         { file: 'Adidas Trionda ball.jpg', by: 'OhanaUnited', lic: 'CC BY-SA 4.0', cap: 'The Trionda on display in Toronto' },
-        { file: 'Cristiano Ronaldo Croatia v Portugal 2 July 2026-087.jpg', by: 'Bryan Berlin', lic: 'CC BY-SA 4.0', cap: 'Cristiano Ronaldo at Croatia v Portugal, 2 July 2026' },
+        { file: 'France v Senegal 16 June 2026-443.jpg', by: 'Bryan Berlin', lic: 'CC BY-SA 4.0', cap: 'The Trionda on the pitch at France v Senegal, 16 June 2026' },
         { file: 'Lionel Messi Argentina v Egypt 7 July 2026-250.jpg', by: 'Bryan Berlin', lic: 'CC BY-SA 4.0', cap: 'Lionel Messi strikes the Trionda, Argentina v Egypt, 7 July 2026' },
-        { file: 'Kylian Mbappe France v Morocco 9 July 2026-163.jpg', by: 'Bryan Berlin', lic: 'CC BY-SA 4.0', cap: 'Kylian Mbappé on the ball, France v Morocco, 9 July 2026' },
+        { file: 'Kylian Mbappe France v Morocco 9 July 2026-163.jpg', by: 'Bryan Berlin', lic: 'CC BY-SA 4.0', cap: 'Kylian Mbappé with the Trionda, France v Morocco, 9 July 2026' },
         { local: 'assets/showcase/trionda-sensor.webp', by: 'adidas', lic: 'supplied by the project owner', cap: 'The Trionda\'s sensor module, lifted out of its panel' }],
       facts: [
         { ph: 0, t: 'Four panels', x: 'The fewest of any World Cup ball, bonded with heat.', more: 'Only four panels: the fewest of any World Cup ball, bonded with heat and adhesive instead of being stitched.' },
@@ -37,15 +37,12 @@
         { t: 'Grooves', x: 'Three pressed into every panel.' },
       ] },
     { id: 'euro24', name: 'Fussballliebe', meta: 'UEFA Euro 2024 · Germany', photos: [
-        { file: 'UEFA EURO 2024 Fan Zone Hamburg Public Viewing Schweiz – Deutschland 04.jpg', by: 'Frank Schwichtenberg', lic: 'CC BY-SA 4.0', cap: 'The Euro 2024 fan zone in Hamburg, Switzerland v Germany' },
-        { file: 'Scotland fan section euros 2024 opening match.jpg', by: 'Monthejags', lic: 'CC0', cap: 'The opening match of Euro 2024 in Munich' },
-        { file: 'UEFA Euro 2024 Match Ball Fussballliebe.jpg', by: 'Bildersindtoll', lic: 'CC0', cap: 'A replica of the Fussballliebe' },
-        { file: 'Lamine Yamal, Sánchez se reunió con los futbolistas de la selección española tras ganar la Eurocopa 2024 (3) (cropped).jpg', by: 'La Moncloa', lic: 'attribution', cap: 'Lamine Yamal, European champion with Spain in 2024' }],
+        { file: 'UEFA Euro 2024 Match Ball Fussballliebe.jpg', by: 'Bildersindtoll', lic: 'CC0', cap: 'A replica of the Fussballliebe' }],
       facts: [
         { ph: 0, t: 'Love of football', x: 'That is what "Fussballliebe" means.', more: '"Fussballliebe" is German for "love of football". Toni Kroos played his last tournament with it, at home in Germany.' },
-        { ph: 1, t: 'Ten host cities', x: 'Each city\'s stadium is drawn on a panel.', more: 'Berlin, Cologne, Dortmund, Düsseldorf, Frankfurt, Gelsenkirchen, Hamburg, Leipzig, Munich and Stuttgart: their names and stadium outlines are printed on the panels.' },
-        { ph: 2, t: 'Connected ball', x: 'A sensor told the referees about every touch.', more: 'A motion sensor inside reported every touch to the video referees, for offsides and handballs.' },
-        { ph: 3, t: 'Steadiest flight', x: 'A no-spin strike hardly wobbles.', more: 'Its own wind-tunnel figures have not been published, so here it flies with those of the Al Rihla (2022), the closest published design: the smallest knuckling forces of the balls tested. Hit it with no spin and it barely wobbles.' },
+        { ph: -1, t: 'Ten host cities', x: 'Each city\'s stadium is drawn on a panel.', more: 'Berlin, Cologne, Dortmund, Düsseldorf, Frankfurt, Gelsenkirchen, Hamburg, Leipzig, Munich and Stuttgart: their names and stadium outlines are printed on the panels.' },
+        { ph: -1, t: 'Connected ball', x: 'A sensor told the referees about every touch.', more: 'A motion sensor inside reported every touch to the video referees, for offsides and handballs.' },
+        { ph: -1, t: 'Steadiest flight', x: 'A no-spin strike hardly wobbles.', more: 'Its own wind-tunnel figures have not been published, so here it flies with those of the Al Rihla (2022), the closest published design: the smallest knuckling forces of the balls tested. Hit it with no spin and it barely wobbles.' },
       ],
       anatomy: [
         { t: '20 panels', x: 'Twelve large shapes and eight triangles.' },
@@ -53,10 +50,10 @@
         { t: 'Sensor', x: 'Reports every touch to the referees.' },
       ] },
     { id: 'ucl', name: 'UCL starball', meta: 'UEFA Champions League', photos: [
-        { file: 'UEFA Champions League ball 2021-2022.jpg', by: 'Ararat Trvants', lic: 'CC0', cap: 'A Champions League ball of 2021–22, with its fiery stars' },
-        { file: 'Champions League Ball 2021-22.jpg', by: 'Vyacheslav Evdokimov', lic: 'CC BY-SA 3.0', cap: 'The 2021–22 ball set on its stand' },
+        { file: 'UEFA Champions League ball 2021-2022.jpg', by: 'Ararat Trvants', lic: 'CC0', cap: 'A Champions League ball of 2021–22' },
+        { file: '2009 UEFA Champions League Final ball.JPG', by: 'PeeJay2K3', lic: 'CC BY-SA 3.0', cap: 'The ball of the 2009 final' },
         { file: 'Adidas Finale 19 UEFA Champions League Final match ball at Adidas, 425 Oxford Street, June 2024.jpg', by: 'No Swan So Fine', lic: 'CC BY-SA 4.0', cap: 'The Finale 19, ball of the 2019 final' },
-        { file: '2020-03-10 Fußball, Männer, UEFA Champions League Achtelfinale, RB Leipzig - Tottenham Hotspur 1DX 3826 by Stepro.jpg', by: 'Steffen Prößdorf', lic: 'CC BY-SA 4.0', cap: 'RB Leipzig v Tottenham, Champions League last 16, 2020' }],
+        { file: '2011 UEFA Champions League Final ball.JPG', by: 'PeeJay2K3', lic: 'CC BY-SA 3.0', cap: 'The ball of the 2011 final' }],
       facts: [
         { ph: 0, t: 'The starball', x: 'The Champions League symbol since 1992.', more: 'Eight stars making up a ball: the starball has been the Champions League\'s symbol since the competition began in 1992.' },
         { ph: 1, t: 'Adidas since 2001', x: 'Every season\'s ball carries the stars.', more: 'Adidas has made the competition\'s match ball since 2001, each season with the stars on it in a new design.' },
@@ -64,14 +61,14 @@
         { ph: 3, t: 'No wind-tunnel data', x: 'So here it flies like the Classic.', more: 'No wind-tunnel figures have been published for any Champions League ball, so in this game it flies like the Classic rather than with invented numbers.' },
       ],
       anatomy: [
-        { t: 'Star panels', x: 'Every white star is a panel of its own.' },
-        { t: 'The print', x: 'The fiery ground between them, in pieces.' },
+        { t: 'White panels', x: 'Twenty, with embossed outlines and red marks.' },
+        { t: 'Dark stars', x: 'Twelve: each star is one panel, traced in green.' },
       ] },
     { id: 'jabulani', name: 'Jabulani', meta: 'FIFA World Cup 2010 · South Africa', photos: [
-        { file: 'Adidas Jabulani Official World Cup 2010 (4158450149).jpg', by: 'Shawn Smith', lic: 'CC BY 2.0', cap: 'The Jabulani' },
+        { file: 'Various Adidas 2010 World Cup balls.JPG', by: 'BrokenSphere', lic: 'CC BY-SA 3.0', cap: 'Jabulanis on the shelf in 2010' },
+        { file: 'Adidas 2010 FIFA World Cup Germany gear.JPG', by: 'BrokenSphere', lic: 'CC BY-SA 3.0', cap: "The Jabulani with Germany's 2010 kit" },
         { file: 'Brazil national football team training at Dobsonville Stadium 2010-06-03 6.jpg', by: 'Marcello Casal Jr / Agência Brasil', lic: 'CC BY 3.0 BR', cap: 'Brazil training with the Jabulani in Soweto, 3 June 2010' },
-        { file: 'FIFA World Cup 2010 Netherlands Uruguay 6.jpg', by: 'Jimmy Baikovicius', lic: 'CC BY-SA 2.0', cap: 'Netherlands v Uruguay, World Cup semi-final, 2010' },
-        { file: 'FIFA World Cup 2010 Uruguay France.jpg', by: 'Warren Rohner', lic: 'CC BY-SA 2.0', cap: 'Uruguay v France, the 2010 World Cup' }],
+        { file: "Jo'bulani.jpg", by: 'warrenski', lic: 'CC BY-SA 2.0', cap: "The Jo'bulani, the gold Jabulani made for the final" }],
       facts: [
         { ph: 0, t: 'To celebrate', x: 'What "Jabulani" means in isiZulu.', more: '"Jabulani" means "to celebrate" in isiZulu.' },
         { ph: 1, t: 'Eleven colours', x: 'One per player, and for 11 official languages.', more: 'Eleven colours: one for each player in a team, and for South Africa\'s eleven official languages.' },
@@ -85,14 +82,13 @@
       ] },
     { id: 'engine', name: 'Classic', meta: '32 panels · the Telstar pattern, 1970', photos: [
         { file: 'Adidas Telstar Mexico 1970 Official ball.jpg', by: 'Zac Allan', lic: 'Public domain', cap: 'The Telstar, ball of the 1970 World Cup' },
-        { file: '1970 Pele Scores World Cup Goal Against Czechoslovakia.jpg', by: 'United Press International', lic: 'Public domain', cap: 'Pelé scores against Czechoslovakia, 1970' },
-        { file: 'Telstar Durlast.jpg', by: 'shine2010', lic: 'CC BY 2.0', cap: 'The Telstar Durlast of 1974' },
-        { file: 'Pele celebrating 1970.jpg', by: 'Associated Press', lic: 'Public domain', cap: 'Pelé celebrating at the 1970 World Cup' }],
+        { file: 'Berlin-Adidas World of Football 2.JPG', by: 'Times', lic: 'CC BY-SA 3.0', cap: 'Giant Telstar balls in Berlin, 2006' },
+        { file: 'Eröffnung des Rapideums - 10 - Ball vom Weltcup 1974.jpg', by: 'Haeferl', lic: 'CC BY-SA 3.0', cap: 'The Telstar Durlast, ball of the 1974 World Cup' }],
       facts: [
         { ph: 0, t: 'A truncated icosahedron', x: '12 pentagons and 20 hexagons.', more: '12 black pentagons and 20 white hexagons: the shape mathematicians call a truncated icosahedron.' },
         { ph: 1, t: 'Made for TV', x: 'Black and white for black-and-white sets.', more: 'Black and white so it showed up on black-and-white television at the 1970 World Cup.' },
         { ph: 2, t: 'Steady', x: 'Stitched seams trip the air early.', more: 'Stitched seams trip the air into turbulence early, which keeps its flight steady.' },
-        { ph: 3, t: 'The reference', x: 'Every other ball is compared with it.', more: 'In this game its drag is the engine\'s measured fit (Goff & Carré, 2009): the other balls are measured against it.' },
+        { ph: -1, t: 'The reference', x: 'Every other ball is compared with it.', more: 'In this game its drag is the engine\'s measured fit (Goff & Carré, 2009): the other balls are measured against it.' },
       ],
       anatomy: [
         { t: '32 panels', x: '12 pentagons and 20 hexagons, stitched.' },
@@ -133,13 +129,13 @@
   // each ball's aurora: four colours that drift behind the map (CSS custom properties, eased from ball to ball)
   const AURORA = {
     trionda: ['#e0313b', '#1fa65a', '#2f6fe0', '#f2c14e'], euro24: ['#e8b021', '#d8342c', '#3a4cc0', '#25a35a'],
-    ucl: ['#ff7a1a', '#ffd23f', '#c2261b', '#6a2a9a'], jabulani: ['#f4c21c', '#2aa56d', '#2a6fd6', '#d9412e'],
+    ucl: ['#5fd35a', '#2c3330', '#e8e8e8', '#e2412f'], jabulani: ['#f4c21c', '#2aa56d', '#2a6fd6', '#d9412e'],
     engine: ['#c9ccd4', '#5b6a8a', '#8a93a6', '#2f4f8f'],
   };
   // the living background behind the card (React Bits' Aurora and Plasma, js/backdrop.js), in the ball's colours
   const BG = {
     trionda: { kind: 'aurora', stops: ['#e0313b', '#1fa65a', '#2f6fe0'] }, euro24: { kind: 'aurora', stops: ['#e8b021', '#d8342c', '#3a4cc0'] },
-    jabulani: { kind: 'aurora', stops: ['#f4c21c', '#2aa56d', '#2a6fd6'] }, ucl: { kind: 'plasma', color: '#ff7a1a' },
+    jabulani: { kind: 'aurora', stops: ['#f4c21c', '#2aa56d', '#2a6fd6'] }, ucl: { kind: 'plasma', color: '#5fd35a' },
     engine: { kind: 'aurora', stops: ['#e9e9ef', '#7d88a6', '#2f3a5e'] },
   };
   let backdrop = null;
@@ -236,10 +232,13 @@
 
   // ── a fact up close: the picture and the story ──
   // real photographs from Wikimedia Commons (free licences), loaded from Commons and credited under the picture
-  const photoUrl = (file) => 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(file.replace(/ /g, '_')) + '?width=1000';
+  const photoUrl = (file) => 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(file.replace(/ /g, '_')) + '?width=1600';
   const pageUrl = (file) => 'https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(file.replace(/ /g, '_'));
   function showDetail(b, f) {
-    const ph = b.photos[Math.min(f.ph || 0, b.photos.length - 1)], img = $('bsImg'), capEl = $('bsCap');
+    const ph = f.ph >= 0 ? b.photos[f.ph] : null, img = $('bsImg'), capEl = $('bsCap');
+    detail.classList.toggle('nophoto', !ph);
+    $('bsDKick').textContent = b.name; $('bsDTitle').textContent = f.t; $('bsDText').textContent = f.more || f.x;
+    if (!ph) { img.removeAttribute('src'); capEl.textContent = ''; detail.hidden = false; requestAnimationFrame(() => detail.classList.add('shown')); if (window.FKSound) FKSound.ui('open'); return; }
     img.classList.remove('loaded'); img.onload = () => img.classList.add('loaded'); img.onerror = () => img.classList.add('failed');
     img.src = ph.local || photoUrl(ph.file); img.alt = ph.cap;
     capEl.textContent = ph.cap + ' · Photo: ' + ph.by + ', ' + ph.lic + (ph.local ? '' : ', ');
@@ -302,13 +301,15 @@
     box.hidden = false;
     if (!big) {
       big = new FKBallView.BallView(cv, { spin: 0.35, zoom: 2.5, interactive: true,
-        onSpin: (d, s) => window.FKSound && FKSound.spin(d, s) });     // satisfying clicks as you turn it
+        onSpin: (d, s) => window.FKSound && FKSound.spin(d, s) });     // a soft sound as you turn it
     }
     callouts.innerHTML = ''; pills = [];
     for (const b of SHOW) big._model(b.id);           // (every ball's maps load now, so each can come apart at once)
     anatomy = true; setAnatomy(false); big.explode = 0; big.explodeV = 0;
     select(SHOW.some((b) => b.id === inPlay()) ? inPlay() : 'trionda');
     big.yaw = logo.yaw; big.pitch = logo.pitch; big.start();
+    // the logo ball becomes the big one: while the showcase is open the corner is empty (one ball on screen, never two)
+    $('logoCanvas').style.visibility = 'hidden';
     if (backdrop) backdrop.start();
     requestAnimationFrame(tick);
     // the ball grows out of the logo: start the big canvas over the logo, then let it settle into place
@@ -338,7 +339,9 @@
       cv.style.transform = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
     }, 140);
     setTimeout(() => {
-      const lb = $('logoBall'); lb.classList.remove('swap'); void lb.offsetWidth; lb.classList.add('swap');   // the logo catches it
+      // the flying ball lands and simply becomes the logo again: same ball, same turn, no second ball appearing
+      logo.yaw = big.yaw; logo.pitch = big.pitch; if ('vy' in logo) logo.vy = big.vy;
+      $('logoCanvas').style.visibility = '';
       box.hidden = true; box.classList.remove('shown', 'closing');
       cv.style.transition = 'none'; cv.style.transform = '';
       if (big) big.stop(); if (backdrop) backdrop.stop();
