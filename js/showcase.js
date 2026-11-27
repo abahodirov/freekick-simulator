@@ -51,9 +51,9 @@
       ] },
     { id: 'ucl', name: 'UCL starball', meta: 'UEFA Champions League', photos: [
         { file: 'FC Salzburg gegen Paris Saint-Germain UEFA Champions League 10.jpg', by: 'Werner100359', lic: 'CC BY-SA 4.0', cap: 'The 2024–25 match ball before Salzburg v Paris Saint-Germain, 10 December 2024' },
-        { local: 'assets/showcase/ucl-zidane-2002.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Zinedine Zidane's volley in the 2002 final, Glasgow" },
-        { local: 'assets/showcase/ucl-messi-2009.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Lionel Messi heads in the 2009 final, Rome' },
-        { local: 'assets/showcase/ucl-bale-2018.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Gareth Bale's overhead kick in the 2018 final, Kyiv" }],
+        { local: 'assets/showcase/ucl-zidane-2002.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Zinedine Zidane's volley in the 2002 final, Glasgow", pos: '50% 18%' },
+        { local: 'assets/showcase/ucl-messi-2009.webp', by: 'unknown', lic: 'supplied by the project owner', cap: 'Lionel Messi heads in the 2009 final, Rome', pos: '50% 4%' },
+        { local: 'assets/showcase/ucl-bale-2018.webp', by: 'unknown', lic: 'supplied by the project owner', cap: "Gareth Bale's overhead kick in the 2018 final, Kyiv", pos: '50% 10%' }],
       facts: [
         { ph: 3, t: 'The starball', x: 'The Champions League symbol since 1992.', more: 'Eight stars making up a ball: the starball has been the Champions League\'s symbol since the competition began in 1992.' },
         { ph: 1, t: 'Adidas since 2001', x: 'Every season\'s ball carries the stars.', more: 'Adidas has made the competition\'s match ball since 2001, each season with the stars on it in a new design.' },
@@ -66,7 +66,7 @@
       ] },
     { id: 'jabulani', name: 'Jabulani', meta: 'FIFA World Cup 2010 · South Africa', photos: [
         { file: 'Various Adidas 2010 World Cup balls.JPG', by: 'BrokenSphere', lic: 'CC BY-SA 3.0', cap: 'Jabulanis on the shelf in 2010' },
-        { file: 'Adidas 2010 FIFA World Cup Germany gear.JPG', by: 'BrokenSphere', lic: 'CC BY-SA 3.0', cap: "The Jabulani with Germany's 2010 kit" },
+        { file: 'Adidas 2010 FIFA World Cup Germany gear.JPG', by: 'BrokenSphere', lic: 'CC BY-SA 3.0', cap: "The Jabulani with Germany's 2010 kit", pos: '50% 88%' },
         { file: 'Brazil national football team training at Dobsonville Stadium 2010-06-03 6.jpg', by: 'Marcello Casal Jr / Agência Brasil', lic: 'CC BY 3.0 BR', cap: 'Brazil training with the Jabulani in Soweto, 3 June 2010' },
         { file: "Jo'bulani.jpg", by: 'warrenski', lic: 'CC BY-SA 2.0', cap: "The Jo'bulani, the gold Jabulani made for the final" }],
       facts: [
@@ -222,10 +222,14 @@
       const mx = q.left ? Math.min(px - 24, sx + 70) : Math.max(px + 24, sx - 70);
       // a straight level run from the pill, then one straight leg to the point (a technical callout, as in a cutaway)
       q.p.setAttribute('d', `M${sx.toFixed(1)},${ey.toFixed(1)} L${mx.toFixed(1)},${ey.toFixed(1)} L${px.toFixed(1)},${py.toFixed(1)}`);
-      const u = ease((now - shownAt - 180 - 70 * q.i) / 520), L = q.p.getTotalLength ? q.p.getTotalLength() : 300;
+      // the line draws from the pill to the ball (a slower, even ease); its point appears only when the line arrives,
+      // with a small pop, so the eye follows the line onto the ball
+      const t0 = now - shownAt - 260 - 110 * q.i, L = q.p.getTotalLength ? q.p.getTotalLength() : 300;
+      const raw = Math.min(1, Math.max(0, t0 / 760)), u = raw * raw * (3 - 2 * raw);
       q.p.style.strokeDasharray = L; q.p.style.strokeDashoffset = L * (1 - u);
-      q.d.setAttribute('cx', px.toFixed(1)); q.d.setAttribute('cy', py.toFixed(1)); q.d.style.opacity = u;
-      q.d.setAttribute('r', (3.2 * (0.4 + 0.6 * u)).toFixed(2));
+      const v = Math.min(1, Math.max(0, (t0 - 700) / 260)), pop = v < 1 ? 1 + 0.6 * Math.sin(Math.PI * v) : 1;
+      q.d.setAttribute('cx', px.toFixed(1)); q.d.setAttribute('cy', py.toFixed(1)); q.d.style.opacity = v;
+      q.d.setAttribute('r', (3.2 * v * pop).toFixed(2));
     }
   }
   window.addEventListener('resize', () => { if (!box.hidden) layout(); });
@@ -241,6 +245,7 @@
     if (!ph) { img.removeAttribute('src'); capEl.textContent = ''; detail.hidden = false; requestAnimationFrame(() => detail.classList.add('shown')); if (window.FKSound) FKSound.ui('open'); return; }
     img.classList.remove('loaded'); img.onload = () => img.classList.add('loaded'); img.onerror = () => img.classList.add('failed');
     img.src = ph.local || photoUrl(ph.file); img.alt = ph.cap;
+    img.style.objectPosition = ph.pos || '50% 40%';            // (the crop keeps the faces and the ball in the frame)
     capEl.textContent = ph.cap + ' · Photo: ' + (ph.by === 'unknown' ? '' : ph.by + ', ') + ph.lic + (ph.local ? '' : ', ');
     if (!ph.local) {
       const a = document.createElement('a'); a.href = pageUrl(ph.file); a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Wikimedia Commons';
