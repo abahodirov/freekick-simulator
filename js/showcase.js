@@ -230,7 +230,8 @@
       const t0 = now - shownAt - 260 - 110 * q.i, L = q.p.getTotalLength ? q.p.getTotalLength() : 300;
       const raw = Math.min(1, Math.max(0, t0 / 760)), u = raw * raw * (3 - 2 * raw);
       q.p.style.strokeDasharray = L; q.p.style.strokeDashoffset = L * (1 - u);
-      const v = Math.min(1, Math.max(0, (t0 - 700) / 260)), pop = v < 1 ? 1 + 0.6 * Math.sin(Math.PI * v) : 1;
+      // (the point waits until its line has fully arrived, then a short beat, before it pops in)
+      const v = Math.min(1, Math.max(0, (t0 - 1050) / 320)), pop = v < 1 ? 1 + 0.6 * Math.sin(Math.PI * v) : 1;
       q.d.setAttribute('cx', px.toFixed(1)); q.d.setAttribute('cy', py.toFixed(1)); q.d.style.opacity = v;
       q.d.setAttribute('r', (3.2 * v * pop).toFixed(2));
     }
