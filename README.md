@@ -9,7 +9,7 @@ Curl it, dip it, or knuckle it past the wall and the keeper. Every flight obeys 
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![Physics tests](https://img.shields.io/badge/tests-107_passing-brightgreen)
-[![Version](https://img.shields.io/badge/version-2.0.4-blueviolet)](https://github.com/abahodirov/freekick-simulator/releases/latest)
+[![Version](https://img.shields.io/badge/version-2.0.5-blueviolet)](https://github.com/abahodirov/freekick-simulator/releases/latest)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-lightgrey)
 ![WebGL2](https://img.shields.io/badge/WebGL2-3D-orange)
 
@@ -25,6 +25,12 @@ No install, no build step, no dependencies.
 
 **Check the physics:** `node tests/physics.test.js` — 29 tests against conservation laws and closed-form results.
 All nine suites (107 tests): `for t in tests/*.test.js; do node "$t"; done`
+
+## What's new in v2.0.5
+
+- **Photographs where the ball is the subject**: the Trionda close up at the World Cup draw and on the pitch, Lionel
+  Messi and Jonathan David striking it at the 2026 World Cup; the 2024-25 Champions League ball held up, in the
+  warm-up, carried out as the match ball and caught by a keeper at Salzburg v Paris Saint-Germain and v Atlético Madrid.
 
 ## What's new in v2.0.4
 
