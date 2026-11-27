@@ -9,7 +9,7 @@ Curl it, dip it, or knuckle it past the wall and the keeper. Every flight obeys 
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![Physics tests](https://img.shields.io/badge/tests-107_passing-brightgreen)
-![Version](https://img.shields.io/badge/version-2.0.1-blueviolet)
+[![Version](https://img.shields.io/badge/version-2.0.4-blueviolet)](https://github.com/abahodirov/freekick-simulator/releases/latest)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-lightgrey)
 ![WebGL2](https://img.shields.io/badge/WebGL2-3D-orange)
 
